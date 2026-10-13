@@ -10,6 +10,8 @@ npm install
 npm run build      # outputs dist/
 npm run watch      # rebuilds on change (unminified, inline sourcemaps)
 npm run icons      # regenerates src/icons/*.png from scripts/make-icons.mjs
+npm run screenshots  # regenerates docs/ (website + filter examples) and store/screenshots/
+npm run package    # builds and zips dist/ into release/ for the Chrome Web Store
 ```
 
 The first build downloads `face_landmarker.task` (~3.7 MB) into `assets/` and

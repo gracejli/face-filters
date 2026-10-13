@@ -5,7 +5,9 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "watch": "node scripts/build.mjs --watch",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "package": "node scripts/package.mjs",
+    "screenshots": "node scripts/screenshots.mjs"
   },
   "keywords": [],
   "author": "",
@@ -13,7 +15,9 @@
   "type": "module",
   "devDependencies": {
     "@mediapipe/tasks-vision": "^1.1.0",
-    "esbuild": "^0.28.2"
+    "@puppeteer/browsers": "^3.2.4",
+    "esbuild": "^0.28.2",
+    "puppeteer-core": "^25.13.0"
   },
   "private": true
 }
