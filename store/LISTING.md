@@ -76,12 +76,12 @@ Certify all three:
 - I do not use or transfer user data for purposes that are unrelated to my item's single purpose.
 - I do not use or transfer user data to determine creditworthiness or for lending purposes.
 
-**Homepage URL:** the published `docs/index.html`.
+**Homepage URL:** https://gracejli.github.io/face-filters/
 
-**Privacy policy URL:** the published `docs/privacy.html`.
+**Privacy policy URL:** https://gracejli.github.io/face-filters/privacy.html
 
 ## Before submitting
 
-- [ ] Fill in the contact email in `docs/privacy.html`.
-- [ ] Push to GitHub and publish `docs/` (Settings › Pages › Deploy from branch `main`, folder `/docs`). The site is then at `https://<user>.github.io/<repo>/`.
+- [x] Fill in the contact email in `docs/privacy.html`.
+- [x] Push to GitHub and publish `docs/` with GitHub Pages.
 - [ ] Bump `version` in `src/manifest.json` for each new upload, then `npm run package`.
