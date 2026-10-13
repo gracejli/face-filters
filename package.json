@@ -1,0 +1,19 @@
+{
+  "name": "face-filters-extension",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "icons": "node scripts/make-icons.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@mediapipe/tasks-vision": "^1.1.0",
+    "esbuild": "^0.28.2"
+  },
+  "private": true
+}
