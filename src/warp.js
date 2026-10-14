@@ -99,7 +99,7 @@ export function renderWarp(source, srcW, srcH, outW, outH, bulges) {
     if (!gl || gl.isContextLost()) init();
   } catch (err) {
     failed = true;
-    console.debug('[face-filters] warp disabled', err);
+    console.debug('[face-hack] warp disabled', err);
     return null;
   }
   if (canvas.width !== outW || canvas.height !== outH) {

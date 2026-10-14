@@ -1,5 +1,5 @@
 // Builds and zips dist/ for upload to the Chrome Web Store.
-// Usage: npm run package  ->  release/face-filters-<version>.zip
+// Usage: npm run package  ->  release/face-hack-<version>.zip
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -11,7 +11,7 @@ const { version } = JSON.parse(fs.readFileSync(path.join(root, 'src', 'manifest.
 execFileSync('node', [path.join(root, 'scripts', 'build.mjs')], { stdio: 'inherit' });
 
 const releaseDir = path.join(root, 'release');
-const zip = path.join(releaseDir, `face-filters-${version}.zip`);
+const zip = path.join(releaseDir, `face-hack-${version}.zip`);
 fs.mkdirSync(releaseDir, { recursive: true });
 fs.rmSync(zip, { force: true });
 // Zip the contents of dist/ so manifest.json sits at the root of the archive.

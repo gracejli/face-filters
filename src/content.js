@@ -77,7 +77,7 @@ function track(el) {
   if (tracked.has(el)) return;
   const canvas = document.createElement('canvas');
   canvas.setAttribute('aria-hidden', 'true');
-  canvas.dataset.faceFilters = '';
+  canvas.dataset.faceHack = '';
   for (const [prop, value] of Object.entries(CANVAS_STYLE)) setStyle(canvas, prop, value);
   const state = {
     el, canvas, visible: false, src: null, faces: null, natW: 0, natH: 0, sizeKey: '', posX: 0, posY: 0,
@@ -207,7 +207,7 @@ function cachedDetect(img, src) {
       bitmap.close();
     }
   })().catch((err) => {
-    console.debug('[face-filters] skipped', src.slice(0, 120), err?.message ?? err);
+    console.debug('[face-hack] skipped', src.slice(0, 120), err?.message ?? err);
     return [];
   });
   resultCache.set(src, p);
@@ -258,7 +258,7 @@ async function detectVideoFrame(state) {
       state.unusable = true;
       stopVideo(state);
     }
-    console.debug('[face-filters] video frame failed', err);
+    console.debug('[face-hack] video frame failed', err);
   } finally {
     state.busy = false;
   }
@@ -429,7 +429,7 @@ function drawWarp(state, ctx, filter, rect, scale, w, h, cs) {
   try {
     out = renderWarp(source, natW, natH, outW, outH, bulges);
   } catch (err) {
-    console.debug('[face-filters] warp failed', err);
+    console.debug('[face-hack] warp failed', err);
     if (isVideo && err?.name === 'SecurityError') {
       state.unusable = true;
       stopVideo(state);
@@ -492,7 +492,7 @@ async function ensureBitmap(state) {
     state.bitmap = bitmap;
     render(state);
   } catch (err) {
-    console.debug('[face-filters] could not load pixels for warp', err?.message ?? err);
+    console.debug('[face-hack] could not load pixels for warp', err?.message ?? err);
   } finally {
     state.bitmapLoading = false;
   }

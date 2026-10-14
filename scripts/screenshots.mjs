@@ -50,11 +50,11 @@ fs.writeFileSync(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Face Filters</title>
+<title>Face Hack</title>
 <link rel="icon" href="icon128.png">
 </head>
 <body>
-<h1><img src="icon128.png" width="40" height="40" alt="" align="absmiddle"> Face Filters</h1>
+<h1><img src="icon128.png" width="40" height="40" alt="" align="absmiddle"> Face Hack</h1>
 <p>A Chrome extension that puts filters on faces in photos and videos on any website.<br>
 Faces are detected on your computer. Nothing is uploaded.</p>
 
@@ -83,7 +83,7 @@ const EXAMPLE_PAGE = `<!doctype html><body style="margin:0;overflow:hidden">
 </body>`;
 const TILE_PAGE = `<!doctype html><body style="margin:0;width:440px;height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff">
 <img src="/docs/icon128.png" width="112" height="112">
-<h1 style="margin:12px 0 4px">Face Filters</h1>
+<h1 style="margin:12px 0 4px">Face Hack</h1>
 <div>Filters for faces on any website.</div>
 </body>`;
 

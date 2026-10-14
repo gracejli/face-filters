@@ -1,4 +1,4 @@
-# Face Filters (Chrome extension, MV3)
+# Face Hack (Chrome extension, MV3)
 
 Puts Snapchat-style filters on faces in images and videos on any page. Face
 detection uses MediaPipe Face Landmarker and runs entirely on your machine.

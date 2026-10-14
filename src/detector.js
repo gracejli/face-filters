@@ -48,7 +48,7 @@ async function createLandmarker() {
       });
     } catch (err) {
       lastErr = err;
-      console.debug(`[face-filters] ${delegate} delegate failed`, err);
+      console.debug(`[face-hack] ${delegate} delegate failed`, err);
     }
   }
   throw lastErr;

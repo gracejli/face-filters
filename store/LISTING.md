@@ -4,11 +4,11 @@ Everything to paste into the [Developer Dashboard](https://chrome.google.com/web
 
 ## Package
 
-Upload `release/face-filters-<version>.zip` from `npm run package`.
+Upload `release/face-hack-<version>.zip` from `npm run package`.
 
 ## Store listing
 
-**Name:** Face Filters
+**Name:** Face Hack
 
 **Summary** (from the manifest, ≤132 characters):
 
@@ -19,7 +19,7 @@ Upload `release/face-filters-<version>.zip` from `npm run package`.
 ```
 Give every face on the web dog ears, cat whiskers, sunglasses or a fisheye bulge.
 
-Face Filters finds faces in photos and videos on any website and adds a filter on top, live. Scroll a gallery, a news site or your social feed and every face gets the treatment.
+Face Hack finds faces in photos and videos on any website and adds a filter on top, live. Scroll a gallery, a news site or your social feed and every face gets the treatment.
 
 FILTERS
 • Dog: floppy ears and a nose, plus a tongue when the mouth is open
@@ -30,7 +30,7 @@ FILTERS
 • Tiny face
 
 HOW TO USE
-Click the Face Filters icon in the toolbar to switch filters or turn it off. Every photo on the page updates at once.
+Click the Face Hack icon in the toolbar to switch filters or turn it off. Every photo on the page updates at once.
 
 PRIVATE BY DESIGN
 Face detection runs entirely on your computer using Google's MediaPipe face model, which ships inside the extension. Your images are never uploaded, there's no account, and no data is collected. The only network requests the extension makes are re-downloading images the page already shows, so it can read their pixels.
