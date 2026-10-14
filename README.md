@@ -32,7 +32,7 @@ tabs you're testing in.
 
 | File | Role |
 | --- | --- |
-| `src/content.js` | Finds `<img>`/`<video>` (MutationObserver), processes only visible ones (IntersectionObserver), positions one canvas per element in a shadow-DOM overlay (ResizeObserver + scroll/resize), runs video detection with `requestVideoFrameCallback` at 15 fps. |
+| `src/content.js` | Finds `<img>`/`<video>` (MutationObserver), processes only visible ones (IntersectionObserver), and draws on a canvas inserted right after each image, so popups, sticky headers and carousels that cover or clip the image do the same to the filter. Runs video detection with `requestVideoFrameCallback` at 15 fps. |
 | `src/detector.js` | Creates the Face Landmarker (GPU, falls back to CPU), decodes images to an untainted `ImageBitmap`. |
 | `src/background.js` | Fetches cross-origin images for the content script and injects MediaPipe's WASM loader on demand. |
 | `src/filters.js` | Stickers (dog, cat, sunglasses, landmark debug view) drawn with Canvas 2D paths, and warps (fisheye, big eyes, tiny face) defined as bulges. |
@@ -73,8 +73,10 @@ Notes:
   `blob:` (MSE) URLs, which work.
 - CSS background images, images inside shadow roots, and iframes (the content
   script runs in the top frame only) aren't processed.
-- An overlay can show through when an image is only partly clipped by an
-  `overflow: hidden` ancestor. Warps follow the image's own `border-radius`
-  (round avatars work), but not `clip-path` or masks.
+- Overlays are clipped like their image in almost all layouts. The exception
+  is a non-positioned `overflow: hidden` element between the image and its
+  nearest positioned ancestor; it clips the image but not the overlay. Warps
+  follow the image's own `border-radius` (round avatars work), but not
+  `clip-path` or masks.
 - Detection runs on the page's main thread. Each run is a few milliseconds on
   the GPU delegate, but very image-heavy pages will feel it.

@@ -20,20 +20,35 @@ const tracked = new Map();
 /** src -> Promise<faces[]>; failures resolve to [] so we don't refetch them. */
 const resultCache = new Map();
 
-// ---------- Overlay layer ----------
+// ---------- Overlay canvases ----------
+//
+// Each overlay is a <canvas> inserted right after its image, so it lives in the
+// same stacking context, scroll container and clipping as the image. Popups,
+// sticky headers and carousels that cover or clip the image do the same to the
+// filter. Styles are inline and !important so page CSS can't move it.
 
-// One fixed-position host in a closed shadow root, so page CSS can't touch the
-// canvases and page scripts querying the DOM don't find them.
-const host = document.createElement('face-filters-overlay');
-host.style.cssText = 'all:initial;position:fixed;left:0;top:0;width:0;height:0;overflow:visible;pointer-events:none;z-index:2147483647;';
-const layer = host.attachShadow({ mode: 'closed' });
+const CANVAS_STYLE = {
+  position: 'absolute',
+  display: 'none',
+  margin: '0',
+  padding: '0',
+  border: '0',
+  'max-width': 'none',
+  'max-height': 'none',
+  'min-width': '0',
+  'min-height': '0',
+  'pointer-events': 'none',
+  'transform-origin': '50% 50%',
+  background: 'none',
+  opacity: '1',
+};
 
-function mountHost() {
-  // In element fullscreen only the fullscreen element's subtree is rendered.
-  const fs = document.fullscreenElement;
-  const parent = fs && !(fs instanceof HTMLVideoElement) && !(fs instanceof HTMLImageElement) ? fs : document.documentElement;
-  if (host.parentNode !== parent) parent.appendChild(host);
+function setStyle(el, prop, value) {
+  el.style.setProperty(prop, value, 'important');
 }
+
+/** Insert after <picture> rather than inside it. */
+const anchorOf = (el) => (el.parentElement instanceof HTMLPictureElement ? el.parentElement : el);
 
 // ---------- Per-element state ----------
 
@@ -47,6 +62,8 @@ function mountHost() {
  * @property {number} natW
  * @property {number} natH
  * @property {string} sizeKey      last canvas size, to know when to redraw
+ * @property {number} posX         canvas left/top in its containing block
+ * @property {number} posY
  * @property {boolean} videoRunning
  * @property {number} videoHandle
  * @property {number} lastRun
@@ -59,10 +76,11 @@ function mountHost() {
 function track(el) {
   if (tracked.has(el)) return;
   const canvas = document.createElement('canvas');
-  canvas.style.cssText = 'position:absolute;left:0;top:0;display:none;pointer-events:none;';
-  layer.appendChild(canvas);
+  canvas.setAttribute('aria-hidden', 'true');
+  canvas.dataset.faceFilters = '';
+  for (const [prop, value] of Object.entries(CANVAS_STYLE)) setStyle(canvas, prop, value);
   const state = {
-    el, canvas, visible: false, src: null, faces: null, natW: 0, natH: 0, sizeKey: '',
+    el, canvas, visible: false, src: null, faces: null, natW: 0, natH: 0, sizeKey: '', posX: 0, posY: 0,
     videoRunning: false, videoHandle: 0, lastRun: 0, busy: false, unusable: false,
     bitmap: null, bitmapLoading: false,
   };
@@ -251,16 +269,19 @@ async function detectVideoFrame(state) {
 /**
  * Position the canvas over the element's content box; redraw if resized.
  *
- * Works in the element's own (untransformed) layout box and re-applies the
- * linear part of every CSS transform between it and the viewport, so rotated
- * or scaled images line up too. The translation comes for free: the centre of
- * a transformed box is always the centre of its bounding rect.
+ * The canvas shares the image's ancestors, so their transforms, scrolling and
+ * clipping apply to both. It copies the image's own transform, and its left/top
+ * are corrected by measuring: the centre of a transformed box is the centre of
+ * its bounding rect, so we compare the canvas's centre with where the content
+ * box's centre should be and map the difference back through the ancestors'
+ * linear transform. That's exact for any 2D transforms and doesn't depend on
+ * which element the browser picks as the containing block.
  */
 function layout(state) {
   const { el, canvas } = state;
   if (!el.isConnected) return untrack(el);
   if (!settings.enabled || !state.visible || !state.faces?.length) {
-    canvas.style.display = 'none';
+    setStyle(canvas, 'display', 'none');
     return;
   }
   const cs = getComputedStyle(el);
@@ -268,23 +289,49 @@ function layout(state) {
   const W = el.offsetWidth;
   const H = el.offsetHeight;
   const left = px(cs.borderLeftWidth) + px(cs.paddingLeft);
+  const right = px(cs.borderRightWidth) + px(cs.paddingRight);
   const top = px(cs.borderTopWidth) + px(cs.paddingTop);
-  const w = W - left - px(cs.borderRightWidth) - px(cs.paddingRight);
-  const h = H - top - px(cs.borderBottomWidth) - px(cs.paddingBottom);
+  const bottom = px(cs.borderBottomWidth) + px(cs.paddingBottom);
+  const w = W - left - right;
+  const h = H - top - bottom;
   if (w < 1 || h < 1 || cs.visibility === 'hidden') {
-    canvas.style.display = 'none';
+    setStyle(canvas, 'display', 'none');
     return;
   }
-  const r = el.getBoundingClientRect();
-  const m = linearTransform(el);
-  canvas.style.display = 'block';
-  canvas.style.transformOrigin = '0 0';
-  canvas.style.transform =
-    `translate(${r.left + r.width / 2}px, ${r.top + r.height / 2}px) ` +
-    `matrix(${m.a}, ${m.b}, ${m.c}, ${m.d}, 0, 0) ` +
-    `translate(${left - W / 2}px, ${top - H / 2}px)`;
-  canvas.style.width = `${w}px`;
-  canvas.style.height = `${h}px`;
+
+  // Frameworks sometimes re-render a parent and drop nodes they don't own.
+  const anchor = anchorOf(el);
+  if (anchor.nextSibling !== canvas) {
+    anchor.after(canvas);
+    state.posX = el.offsetLeft + left;
+    state.posY = el.offsetTop + top;
+  }
+
+  const own = ownTransform(el, cs);
+  const parentM = el.parentElement ? linearTransform(el.parentElement) : new DOMMatrix();
+  const m = parentM.multiply(own);
+  setStyle(canvas, 'display', 'block');
+  setStyle(canvas, 'width', `${w}px`);
+  setStyle(canvas, 'height', `${h}px`);
+  setStyle(canvas, 'transform', own.isIdentity ? 'none' : `matrix(${own.a}, ${own.b}, ${own.c}, ${own.d}, 0, 0)`);
+  // Paint above the image even when the image has its own z-index.
+  setStyle(canvas, 'z-index', cs.zIndex === 'auto' ? 'auto' : cs.zIndex);
+  setStyle(canvas, 'left', `${state.posX}px`);
+  setStyle(canvas, 'top', `${state.posY}px`);
+
+  const er = el.getBoundingClientRect();
+  const cr = canvas.getBoundingClientRect();
+  // Where the content box's centre should be, in viewport pixels.
+  const off = m.transformPoint(new DOMPoint((left - right) / 2, (top - bottom) / 2));
+  const dx = er.left + er.width / 2 + off.x - (cr.left + cr.width / 2);
+  const dy = er.top + er.height / 2 + off.y - (cr.top + cr.height / 2);
+  if (Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05) {
+    const fix = parentM.inverse().transformPoint(new DOMPoint(dx, dy));
+    state.posX += fix.x;
+    state.posY += fix.y;
+    setStyle(canvas, 'left', `${state.posX}px`);
+    setStyle(canvas, 'top', `${state.posY}px`);
+  }
 
   const scale = (window.devicePixelRatio || 1) * Math.sqrt(Math.abs(m.a * m.d - m.b * m.c));
   const sizeKey = `${w}x${h}@${scale.toFixed(3)}|${cs.objectFit}|${cs.objectPosition}`;
@@ -296,22 +343,26 @@ function layout(state) {
   }
 }
 
+/** 2D linear part of one element's own transform (transform, rotate, scale). */
+function ownTransform(node, cs = getComputedStyle(node)) {
+  let own = new DOMMatrix();
+  if (cs.transform === 'none' && cs.rotate === 'none' && cs.scale === 'none') return own;
+  // Individual properties apply before `transform`: translate, rotate, scale, transform.
+  const rot = /^(-?[\d.]+)deg$/.exec(cs.rotate);
+  if (rot) own = own.rotate(parseFloat(rot[1]));
+  if (cs.scale !== 'none') {
+    const [sx, sy = sx] = cs.scale.split(' ').map(parseFloat);
+    own = own.scale(sx, sy);
+  }
+  if (cs.transform !== 'none') own = own.multiply(new DOMMatrix(cs.transform));
+  return new DOMMatrix([own.a, own.b, own.c, own.d, 0, 0]);
+}
+
 /** Product of the 2D linear parts of all CSS transforms from el up to the root. */
 function linearTransform(el) {
   let m = new DOMMatrix();
   for (let node = el; node instanceof Element; node = node.parentElement ?? node.getRootNode()?.host) {
-    const cs = getComputedStyle(node);
-    if (cs.transform === 'none' && cs.rotate === 'none' && cs.scale === 'none') continue;
-    // Individual properties apply before `transform`: translate, rotate, scale, transform.
-    let own = new DOMMatrix();
-    const rot = /^(-?[\d.]+)deg$/.exec(cs.rotate);
-    if (rot) own = own.rotate(parseFloat(rot[1]));
-    if (cs.scale !== 'none') {
-      const [sx, sy = sx] = cs.scale.split(' ').map(parseFloat);
-      own = own.scale(sx, sy);
-    }
-    if (cs.transform !== 'none') own = own.multiply(new DOMMatrix(cs.transform));
-    m = own.multiply(m);
+    m = ownTransform(node).multiply(m);
   }
   return m;
 }
@@ -489,7 +540,6 @@ function redrawAll() {
 
 async function init() {
   settings = await chrome.storage.local.get(DEFAULT_SETTINGS);
-  mountHost();
   scan(document.documentElement);
   mutations.observe(document.documentElement, {
     childList: true,
@@ -501,10 +551,7 @@ async function init() {
   // without resizing them, so ResizeObserver alone isn't enough.
   addEventListener('scroll', layoutAllSoon, { capture: true, passive: true });
   addEventListener('resize', layoutAllSoon, { passive: true });
-  document.addEventListener('fullscreenchange', () => {
-    mountHost();
-    layoutAllSoon();
-  });
+  document.addEventListener('fullscreenchange', layoutAllSoon);
   // Catch layout shifts nothing else tells us about (carousels, transitions).
   setInterval(layoutAllSoon, 500);
 
