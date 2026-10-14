@@ -34,48 +34,54 @@ fs.mkdirSync(storeDir, { recursive: true });
 fs.copyFileSync(path.join(root, 'src', 'icons', 'icon128.png'), path.join(docs, 'icon128.png'));
 fs.cpSync(path.join(root, 'src', 'fonts'), path.join(docs, 'fonts'), { recursive: true });
 
-// Space Mono, self-hosted from docs/fonts/ (shared by every page on the site).
-const FONT_CSS = `<style>
-@font-face { font-family: 'Space Mono'; src: url('fonts/SpaceMono-Regular.ttf') format('truetype'); font-weight: 400; }
-@font-face { font-family: 'Space Mono'; src: url('fonts/SpaceMono-Bold.ttf') format('truetype'); font-weight: 700; }
-body { font-family: 'Space Mono', ui-monospace, monospace; }
-</style>`;
+// Shared site stylesheet (layout + self-hosted Space Mono from docs/fonts/).
+const SITE_CSS = '<link rel="stylesheet" href="style.css">';
 
 // Every user-facing filter except the debug view, in popup order.
 const filters = Object.entries(FILTERS).filter(([id]) => id !== 'mesh');
 
 // ---------- docs/index.html ----------
 
-const cells = [['original', 'No filter'], ...filters.map(([id, f]) => [id, f.label])]
-  .map(([id, label]) => `<td align="center"><img src="examples/${id}.png" width="240" height="240" alt="${label}"><br>${label}</td>`);
-const rows = [];
-for (let i = 0; i < cells.length; i += 4) rows.push(`<tr>\n${cells.slice(i, i + 4).join('\n')}\n</tr>`);
+const figures = filters
+  .map(([id, f]) => `<figure><img src="examples/${id}.png" width="240" height="240" alt="${f.label} filter"><figcaption>${f.label}</figcaption></figure>`)
+  .join('\n');
 
 fs.writeFileSync(
   path.join(docs, 'index.html'),
   `<!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Face Hack</title>
 <link rel="icon" href="icon128.png">
-${FONT_CSS}
+${SITE_CSS}
 </head>
 <body>
-<h1><img src="icon128.png" width="40" height="40" alt="" align="absmiddle"> Face Hack</h1>
-<p>A Chrome extension that puts filters on faces in photos and videos on any website.<br>
-Faces are detected on your computer. Nothing is uploaded.</p>
+<main>
+<img class="logo" src="icon128.png" alt="">
+<h1>Face Hack</h1>
 
-<h2>Filters</h2>
-<table cellpadding="6">
-${rows.join('\n')}
-</table>
+<p class="cta">Get the extension<br><small>(Chrome Web Store link coming soon)</small></p>
 
-<h2>Install</h2>
-<p>Chrome Web Store link coming soon.</p>
+<div class="intro">Face Hack puts filters on the faces in photos and videos on any website. Everything happens on your computer.</div>
 
-<p><a href="privacy.html">Privacy policy</a></p>
+<div class="filters">
+${figures}
+</div>
+
+<div class="copy">
+<h2>How it works</h2>
+<p>Turn it on and browse like normal. Face Hack finds the faces in photos and videos on the page and adds whichever filter you picked: dog ears, cat whiskers, sunglasses, a fisheye bulge, big eyes or a tiny face. Click the icon in your toolbar to switch filters, and drag the slider to make the ears bigger or the fisheye stronger. Every face on the page changes as you drag.</p>
+
+<h2>Private by design</h2>
+<p>Face detection runs on your computer with a face model that ships inside the extension. Your photos are never uploaded, there's no account, and nothing is tracked.</p>
+</div>
+
+<footer>
+<a href="privacy.html">Privacy policy</a> · <a href="https://github.com/gracejli/face-filters">Source on GitHub</a>
+</footer>
+</main>
 </body>
 </html>
 `,
@@ -90,7 +96,7 @@ const TYPES = { '.html': 'text/html', '.png': 'image/png', '.jpg': 'image/jpeg',
 const EXAMPLE_PAGE = `<!doctype html><body style="margin:0;overflow:hidden">
 <img src="/obama.jpg" style="width:460px;display:block;margin:-6px 0 0 -110px">
 </body>`;
-const TILE_PAGE = `<!doctype html><base href="/docs/">${FONT_CSS}<body style="margin:0;width:440px;height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff">
+const TILE_PAGE = `<!doctype html><base href="/docs/">${SITE_CSS}<body style="margin:0;width:440px;height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff">
 <img src="/docs/icon128.png" width="112" height="112">
 <h1 style="margin:12px 0 4px">Face Hack</h1>
 <div>Filters for faces on any website.</div>
