@@ -229,21 +229,40 @@ function drawMesh(ctx, face, pts) {
 
 // ---------- Warps ----------
 // Warp filters return bulges ({x, y, r, s} in source pixels, see warp.js)
-// instead of drawing. s > 0 magnifies, s < 0 shrinks.
+// instead of drawing. s > 0 magnifies, s < 0 shrinks. `t` is the slider
+// amount in 0..1. Strength stays below 1 so the warp never folds over itself.
 
-const fisheye = (face) => [{ x: face.noseTip.x, y: face.noseTip.y, r: face.eyeDist * 1.5, s: 0.55 }];
+const fisheye = (face, pts, t) => [
+  { x: face.noseTip.x, y: face.noseTip.y, r: face.eyeDist * (1.2 + 0.6 * t), s: 0.95 * t },
+];
 
-const bigEyes = (face, pts) =>
-  [pts[LM.rightIris], pts[LM.leftIris]].map((c) => ({ x: c.x, y: c.y, r: face.eyeDist * 0.5, s: 0.6 }));
+const bigEyes = (face, pts, t) =>
+  [pts[LM.rightIris], pts[LM.leftIris]].map((c) => ({ x: c.x, y: c.y, r: face.eyeDist * (0.4 + 0.2 * t), s: 0.95 * t }));
 
-const pinch = (face) => [{ x: face.noseTip.x, y: face.noseTip.y, r: face.eyeDist * 1.6, s: -0.5 }];
+const pinch = (face, pts, t) => [{ x: face.noseTip.x, y: face.noseTip.y, r: face.eyeDist * 1.6, s: -t }];
+
+// `amount` filters get a slider in the popup. For stickers it scales the
+// sticker (50 = normal size, 0 = half, 100 = double); for warps it's strength.
+// Defaults reproduce the original look.
+const SIZE = { label: 'Size', default: 50 };
 
 export const FILTERS = {
-  dog: { label: 'Dog', draw: drawDog },
-  cat: { label: 'Cat', draw: drawCat },
-  glasses: { label: 'Sunglasses', draw: drawGlasses },
-  fisheye: { label: 'Fisheye', warp: fisheye },
-  bigEyes: { label: 'Big eyes', warp: bigEyes },
-  pinch: { label: 'Tiny face', warp: pinch },
-  mesh: { label: 'Landmarks (debug)', draw: drawMesh },
+  dog: { label: 'Dog', draw: drawDog, amount: SIZE },
+  cat: { label: 'Cat', draw: drawCat, amount: SIZE },
+  glasses: { label: 'Sunglasses', draw: drawGlasses, amount: SIZE },
+  fisheye: { label: 'Fisheye', warp: fisheye, amount: { label: 'Strength', default: 58 } },
+  bigEyes: { label: 'Big eyes', warp: bigEyes, amount: { label: 'Strength', default: 63 } },
+  pinch: { label: 'Tiny face', warp: pinch, amount: { label: 'Strength', default: 50 } },
+  mesh: { label: 'Landmarks', draw: drawMesh },
 };
+
+/** Slider amount for a filter as 0..1 (the saved value, else its default). */
+export function amountOf(id, amounts) {
+  const amount = FILTERS[id]?.amount;
+  if (!amount) return 0.5;
+  const v = amounts?.[id];
+  return (typeof v === 'number' ? v : amount.default) / 100;
+}
+
+/** Sticker scale for amount t: 0.5x at 0, 1x at 0.5, 2x at 1. */
+export const stickerScale = (t) => 2 ** ((t - 0.5) * 2);

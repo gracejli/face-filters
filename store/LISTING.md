@@ -30,7 +30,7 @@ FILTERS
 • Tiny face
 
 HOW TO USE
-Click the Face Hack icon in the toolbar to switch filters or turn it off. Every photo on the page updates at once.
+Click the Face Hack icon in the toolbar to pick a filter or turn it off. Drag the slider to change how big the stickers are or how strong the warp is. Every photo on the page updates as you drag.
 
 PRIVATE BY DESIGN
 Face detection runs entirely on your computer using Google's MediaPipe face model, which ships inside the extension. Your images are never uploaded, there's no account, and no data is collected. The only network requests the extension makes are re-downloading images the page already shows, so it can read their pixels.

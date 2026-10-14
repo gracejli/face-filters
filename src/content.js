@@ -2,7 +2,7 @@
 // the selected filter on a canvas overlaid on each element.
 
 import { DEFAULT_SETTINGS } from './settings.js';
-import { FILTERS, faceFrame } from './filters.js';
+import { FILTERS, amountOf, faceFrame, stickerScale } from './filters.js';
 import { detectFaces, loadBitmap } from './detector.js';
 import { renderWarp } from './warp.js';
 
@@ -380,13 +380,17 @@ function draw(state, w, h, cs, scale) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!state.natW) return;
   const filter = currentFilter();
+  const t = amountOf(settings.filter, settings.amounts);
   const rect = contentRect(w, h, state.natW, state.natH, cs.objectFit, cs.objectPosition);
 
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
-  if (filter.warp) return drawWarp(state, ctx, filter, rect, scale, w, h, cs);
+  if (filter.warp) return drawWarp(state, ctx, filter, rect, scale, w, h, cs, t);
   for (const face of state.faces) {
     const pts = face.map((p) => ({ x: rect.x + p.x * rect.w, y: rect.y + p.y * rect.h }));
-    filter.draw(ctx, faceFrame(pts), pts);
+    const frame = faceFrame(pts);
+    // Stickers are drawn in eye-distance units, so scaling it scales the sticker.
+    if (filter.amount) frame.eyeDist *= stickerScale(t);
+    filter.draw(ctx, frame, pts);
   }
 }
 
@@ -399,7 +403,7 @@ function currentFilter() {
  * paste just the affected region over the element. Outside the bulges the
  * warp is the identity, so the patch blends into the original.
  */
-function drawWarp(state, ctx, filter, rect, scale, w, h, cs) {
+function drawWarp(state, ctx, filter, rect, scale, w, h, cs, t) {
   const isVideo = state.el instanceof HTMLVideoElement;
   const source = isVideo ? state.el : state.bitmap;
   if (!source) return void ensureBitmap(state);
@@ -407,7 +411,7 @@ function drawWarp(state, ctx, filter, rect, scale, w, h, cs) {
 
   const bulges = state.faces.flatMap((face) => {
     const pts = face.map((p) => ({ x: p.x * natW, y: p.y * natH }));
-    return filter.warp(faceFrame(pts), pts);
+    return filter.warp(faceFrame(pts), pts, t);
   });
   if (!bulges.length) return;
 

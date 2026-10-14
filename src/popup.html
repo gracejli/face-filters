@@ -14,8 +14,17 @@
     </header>
 
     <fieldset id="filters">
-      <legend>Filter</legend>
+      <legend class="visually-hidden">Filter</legend>
     </fieldset>
+
+    <div id="amount" class="amount" hidden>
+      <label for="amount-input" id="amount-label">Strength</label>
+      <div class="slider">
+        <span class="end small" aria-hidden="true"></span>
+        <input id="amount-input" type="range" min="0" max="100" step="1" />
+        <span class="end large" aria-hidden="true"></span>
+      </div>
+    </div>
 
     <p class="note">Faces are detected on this device. No images leave your computer.</p>
     <script src="popup.js"></script>

@@ -30,6 +30,7 @@ async function copyStatic() {
   await fs.mkdir(path.join(dist, 'wasm'), { recursive: true });
   await fs.mkdir(path.join(dist, 'models'), { recursive: true });
   await fs.cp(path.join(root, 'src', 'icons'), path.join(dist, 'icons'), { recursive: true });
+  await fs.cp(path.join(root, 'src', 'fonts'), path.join(dist, 'fonts'), { recursive: true });
   const copies = [
     ['src/manifest.json', 'manifest.json'],
     ['src/popup.html', 'popup.html'],
@@ -54,6 +55,8 @@ const options = {
   },
   outdir: dist,
   bundle: true,
+  // Inline SVG icons (popup) as strings.
+  loader: { '.svg': 'text' },
   format: 'iife',
   target: 'chrome116',
   minify: !watch,

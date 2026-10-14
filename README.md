@@ -37,7 +37,7 @@ tabs you're testing in.
 | `src/background.js` | Fetches cross-origin images for the content script and injects MediaPipe's WASM loader on demand. |
 | `src/filters.js` | Stickers (dog, cat, sunglasses, landmark debug view) drawn with Canvas 2D paths, and warps (fisheye, big eyes, tiny face) defined as bulges. |
 | `src/warp.js` | One shared WebGL2 context that renders an image or video frame with bulge distortions; the result is pasted onto the overlay canvas. |
-| `src/popup.*` | On/off toggle and filter picker, stored in `chrome.storage.local`. |
+| `src/popup.*` | On/off toggle, a grid of filter tiles (Tabler icons, inlined at build time) and an amount slider for filters that define one (size for stickers, strength for warps). Settings live in `chrome.storage.local`. |
 
 Notes:
 
@@ -80,3 +80,9 @@ Notes:
   `clip-path` or masks.
 - Detection runs on the page's main thread. Each run is a few milliseconds on
   the GPU delegate, but very image-heavy pages will feel it.
+
+## Credits
+
+- Face model and runtime: [MediaPipe](https://github.com/google-ai-edge/mediapipe) (Apache 2.0)
+- Icons: [Tabler Icons](https://tabler.io/icons) (MIT)
+- Font: [Space Mono](https://github.com/googlefonts/spacemono) (SIL Open Font License, see `src/fonts/OFL.txt`)
