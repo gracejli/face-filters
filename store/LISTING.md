@@ -63,7 +63,7 @@ GOOD TO KNOW
 
 | Permission | Justification |
 | --- | --- |
-| `storage` | Saves the user's two settings (filters on/off and which filter is selected) locally with chrome.storage.local. |
+| `storage` | Saves the user's settings (filters on/off, which filter is selected, and each filter's slider position) locally with chrome.storage.local. |
 | `scripting` | Loads the bundled MediaPipe WebAssembly loader into the extension's content script only when a page has a visible image or video to process, so pages without media don't pay for it. No remote code is injected. |
 | Host permission `<all_urls>` | The extension's purpose is to add filters to images on whatever site the user is viewing, so the content script must run on all sites. The background service worker also re-fetches cross-origin images the page already displays, because the browser blocks reading their pixels otherwise. These requests are GETs to URLs taken from the page, without cookies, and the image data never leaves the device. |
 
