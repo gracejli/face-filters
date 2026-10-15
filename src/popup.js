@@ -1,6 +1,7 @@
 import { DEFAULT_SETTINGS } from './settings.js';
 import { BODY_COLORS, FILTERS, amountDef, amountKey } from './filters.js';
 import { defaultAdURL } from './ad.js';
+import { defaultCardURL } from './card.js';
 import paw from '@tabler/icons/outline/paw.svg';
 import cat from '@tabler/icons/outline/cat.svg';
 import sunglasses from '@tabler/icons/outline/sunglasses.svg';
@@ -10,11 +11,13 @@ import lensConcave from '@tabler/icons/outline/lens-concave.svg';
 import grain from '@tabler/icons/outline/grain.svg';
 import faceBlur from './popup-icons/face-blur.svg';
 import bodyBlur from './popup-icons/body-blur.svg';
+import headband from './popup-icons/headband.svg';
 
 const ICONS = {
   dog: paw,
   cat,
   glasses: sunglasses,
+  headband,
   fisheye: lensConvex,
   bigEyes: eye,
   pinch: lensConcave,
@@ -31,6 +34,8 @@ const stylesBox = $('body-styles');
 const swatchesBox = $('swatches');
 const imageRow = $('image-row');
 const imageThumb = $('image-thumb');
+const cardRow = $('card-row');
+const cardThumb = $('card-thumb');
 const amountBox = $('amount');
 const amountLabel = $('amount-label');
 const amountInput = $('amount-input');
@@ -39,6 +44,11 @@ let settings = structuredClone(DEFAULT_SETTINGS);
 let defaultAd = '';
 defaultAdURL().then((url) => {
   defaultAd = url;
+  show();
+});
+let defaultCard = '';
+defaultCardURL().then((url) => {
+  defaultCard = url;
   show();
 });
 
@@ -92,6 +102,10 @@ function show() {
   const thumb = settings.bodyImage || defaultAd;
   if (thumb) imageThumb.src = thumb;
 
+  cardRow.hidden = settings.filter !== 'headband' || !settings.enabled;
+  const card = settings.headbandImage || defaultCard;
+  if (card) cardThumb.src = card;
+
   const key = amountKey(settings.filter, style);
   const def = amountDef(key);
   amountBox.hidden = !def || !settings.enabled;
@@ -110,8 +124,10 @@ chrome.storage.local.get(DEFAULT_SETTINGS).then((stored) => {
 
 // Another tab (the upload page) can change the image while we're open.
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area !== 'local' || !changes.bodyImage) return;
-  settings.bodyImage = changes.bodyImage.newValue ?? null;
+  if (area !== 'local') return;
+  for (const key of ['bodyImage', 'headbandImage']) {
+    if (key in changes) settings[key] = changes[key].newValue ?? null;
+  }
   show();
 });
 
@@ -147,7 +163,10 @@ swatchesBox.addEventListener('click', (e) => {
 // File pickers can close the popup before the file arrives, so uploading
 // happens on its own page in a tab.
 $('upload').addEventListener('click', () => {
-  chrome.tabs.create({ url: chrome.runtime.getURL('upload.html') });
+  chrome.tabs.create({ url: chrome.runtime.getURL('upload.html?for=body') });
+});
+$('card-upload').addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('upload.html?for=headband') });
 });
 
 // Save at most once per frame while dragging; every person or face on the

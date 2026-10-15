@@ -41,7 +41,8 @@ const SITE_CSS = '<link rel="stylesheet" href="style.css">';
 // `settings` is what the extension is set to when the example is captured.
 const FACE_EXAMPLES = Object.entries(FILTERS)
   .filter(([id, f]) => id !== 'mesh' && ['sticker', 'warp'].includes(kindOf(f)))
-  .map(([id, f]) => ({ file: id, label: f.label, settings: { filter: id } }));
+  // The headband's card stands well above the head, so that example leaves room above the photo.
+  .map(([id, f]) => ({ file: id, label: f.label, settings: { filter: id }, headroom: !!f.image }));
 const BLUR_EXAMPLES = [
   { file: 'faceBlur', label: FILTERS.faceBlur.label, settings: { filter: 'faceBlur' } },
   ...Object.entries(FILTERS.body.styles).map(([style, { label }]) => ({
@@ -89,7 +90,7 @@ ${figuresFor(BLUR_EXAMPLES)}
 
 <div class="copy">
 <h2>How it works</h2>
-<p>Turn it on and browse like normal. Face Hack finds the faces in photos and videos on the page and adds whichever filter you picked: dog ears, cat whiskers, sunglasses, a fisheye bulge, big eyes or a tiny face. Click the icon in your toolbar to switch filters, and drag the slider to make the ears bigger or the fisheye stronger. Every face on the page changes as you drag.</p>
+<p>Turn it on and browse like normal. Face Hack finds the faces in photos and videos on the page and adds whichever filter you picked: dog ears, cat whiskers, sunglasses, a guessing-game headband with a picture of your choice, a fisheye bulge, big eyes or a tiny face. Click the icon in your toolbar to switch filters, and drag the slider to make the ears bigger or the fisheye stronger. Every face on the page changes as you drag.</p>
 <p>Face blur smudges out faces and necks. Body blur finds whole people, even ones facing away, and blocks them out with a solid color, a pixelated smear, or an image of your choice. Until you upload one, everybody becomes YOUR AD HERE.</p>
 
 <h2>Private by design</h2>
@@ -108,11 +109,15 @@ console.log('wrote docs/index.html');
 
 // ---------- Local server ----------
 
-const TYPES = { '.html': 'text/html', '.png': 'image/png', '.jpg': 'image/jpeg', '.ttf': 'font/ttf' };
+const TYPES = { '.html': 'text/html', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.ttf': 'font/ttf' };
 // The portrait, zoomed so head and shoulders fill the 240x240 viewport. The
 // viewport does the cropping, so the extension sees an ordinary <img>.
 const EXAMPLE_PAGE = `<!doctype html><body style="margin:0;overflow:hidden">
 <img src="/obama.jpg" style="width:460px;display:block;margin:-6px 0 0 -110px">
+</body>`;
+// Smaller and lower, leaving white space above the photo for tall stickers.
+const HEADROOM_PAGE = `<!doctype html><body style="margin:0;overflow:hidden;background:#fff">
+<img src="/obama.jpg" style="width:360px;display:block;margin:72px 0 0 -60px">
 </body>`;
 const TILE_PAGE = `<!doctype html><base href="/docs/">${SITE_CSS}<body style="margin:0;width:440px;height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff">
 <img src="/docs/icon128.png" width="112" height="112">
@@ -123,7 +128,8 @@ const TILE_PAGE = `<!doctype html><base href="/docs/">${SITE_CSS}<body style="ma
 const server = http.createServer((req, res) => {
   const url = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (url === '/example.html' || url === '/tile.html') {
-    res.writeHead(200, { 'content-type': 'text/html' }).end(url === '/tile.html' ? TILE_PAGE : EXAMPLE_PAGE);
+    const headroom = new URL(req.url, 'http://x').searchParams.has('headroom');
+    res.writeHead(200, { 'content-type': 'text/html' }).end(url === '/tile.html' ? TILE_PAGE : headroom ? HEADROOM_PAGE : EXAMPLE_PAGE);
     return;
   }
   const file = url === '/obama.jpg' ? SOURCE : url.startsWith('/docs/') ? path.join(docs, path.normalize(url.slice(6))) : null;
@@ -156,11 +162,11 @@ try {
 
   // Examples: one fresh page per filter, captured at 2x for crisp images.
   let first = true;
-  for (const { file: id, settings } of [...FACE_EXAMPLES, ...BLUR_EXAMPLES]) {
+  for (const { file: id, settings, headroom } of [...FACE_EXAMPLES, ...BLUR_EXAMPLES]) {
     await setSettings({ enabled: true, ...settings });
     const page = await browser.newPage();
     await page.setViewport({ width: 240, height: 240, deviceScaleFactor: 2 });
-    await page.goto(`${origin}/example.html`, { waitUntil: 'load' });
+    await page.goto(`${origin}/example.html${headroom ? '?headroom' : ''}`, { waitUntil: 'load' });
     await sleep(first ? 8000 : 3000); // the first page also loads MediaPipe
     first = false;
     await page.screenshot({ path: path.join(examplesDir, `${id}.png`) });

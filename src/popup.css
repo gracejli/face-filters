@@ -154,6 +154,7 @@ fieldset:disabled { opacity: 0.45; }
 }
 .swatch[aria-pressed='true'] { outline: 2px solid var(--fg); outline-offset: 2px; }
 .image-row { display: flex; align-items: center; gap: 10px; }
+.card-row { margin-top: 12px; }
 .image-row img {
   width: 44px;
   height: 44px;

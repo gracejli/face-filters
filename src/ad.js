@@ -2,10 +2,11 @@
 // "YOUR AD HERE" pattern, used until the user uploads their own image.
 
 const FONT_URL = () => chrome.runtime.getURL('fonts/SpaceMono-Bold.ttf');
-const FAMILY = 'Face Hack Space Mono';
+export const FAMILY = 'Face Hack Space Mono';
 
 let fontReady = null;
-function loadFont() {
+/** Load Space Mono Bold for drawing on canvases (shared with card.js). */
+export function loadFont() {
   fontReady ??= (async () => {
     try {
       const font = new FontFace(FAMILY, `url(${FONT_URL()})`, { weight: '700' });

@@ -3,22 +3,22 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Face Hack: body image</title>
+    <title>Face Hack: upload image</title>
     <link rel="stylesheet" href="upload.css" />
   </head>
   <body>
     <main>
       <img class="logo" src="icons/icon128.png" alt="" />
-      <h1>Body image</h1>
-      <p>This image fills every person when the Body blur filter is set to Image. It's saved only in this browser.</p>
+      <h1 id="title">Body image</h1>
+      <p id="blurb">This image fills every person when the Body blur filter is set to Image. It's saved only in this browser.</p>
 
-      <div class="frame"><img id="preview" alt="Current body image" /></div>
+      <div class="frame"><img id="preview" alt="Current image" /></div>
 
       <label class="button primary">
         Choose image
         <input id="file" type="file" accept="image/*" />
       </label>
-      <button id="reset" class="button" type="button">Use “YOUR AD HERE”</button>
+      <button id="reset" class="button" type="button">Use the default</button>
       <p id="status" class="status" role="status"></p>
     </main>
     <script src="upload.js"></script>

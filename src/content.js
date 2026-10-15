@@ -6,6 +6,7 @@ import { FILTERS, amountKey, amountOf, faceAndNeckPath, faceFrame, kindOf, stick
 import { detectFaces, detectFacesInImage, loadBitmap, segmentPeople } from './detector.js';
 import { renderWarp } from './warp.js';
 import { drawDefaultAd } from './ad.js';
+import { drawDefaultCard } from './card.js';
 
 const MIN_SIZE = 64;
 const VIDEO_FPS = 15;
@@ -429,20 +430,28 @@ function layout(state) {
     return;
   }
 
+  // Stickers (ears, the headband's card) stick out past the top of the head,
+  // which is often the top of the photo, so their canvas extends beyond the
+  // image. Everything else is a patch of the image and stays inside it.
+  const pad = currentKind() === 'sticker' ? stickerPad(w, h) : NO_PAD;
+  state.pad = pad;
+
   // Frameworks sometimes re-render a parent and drop nodes they don't own.
   const anchor = anchorOf(el);
   if (anchor.nextSibling !== canvas) {
     anchor.after(canvas);
-    state.posX = el.offsetLeft + left;
-    state.posY = el.offsetTop + top;
+    state.posX = el.offsetLeft + left - pad.l;
+    state.posY = el.offsetTop + top - pad.t;
   }
 
   const own = ownTransform(el, cs);
   const parentM = el.parentElement ? linearTransform(el.parentElement) : new DOMMatrix();
   const m = parentM.multiply(own);
   setStyle(canvas, 'display', 'block');
-  setStyle(canvas, 'width', `${w}px`);
-  setStyle(canvas, 'height', `${h}px`);
+  const cw = w + pad.l + pad.r;
+  const ch = h + pad.t + pad.b;
+  setStyle(canvas, 'width', `${cw}px`);
+  setStyle(canvas, 'height', `${ch}px`);
   setStyle(canvas, 'transform', own.isIdentity ? 'none' : `matrix(${own.a}, ${own.b}, ${own.c}, ${own.d}, 0, 0)`);
   // Paint above the image even when the image has its own z-index.
   setStyle(canvas, 'z-index', cs.zIndex === 'auto' ? 'auto' : cs.zIndex);
@@ -451,8 +460,9 @@ function layout(state) {
 
   const er = el.getBoundingClientRect();
   const cr = canvas.getBoundingClientRect();
-  // Where the content box's centre should be, in viewport pixels.
-  const off = m.transformPoint(new DOMPoint((left - right) / 2, (top - bottom) / 2));
+  // Where the canvas's centre should be (the content box's centre, shifted by
+  // any uneven padding), in viewport pixels.
+  const off = m.transformPoint(new DOMPoint((left - right + pad.r - pad.l) / 2, (top - bottom + pad.b - pad.t) / 2));
   const dx = er.left + er.width / 2 + off.x - (cr.left + cr.width / 2);
   const dy = er.top + er.height / 2 + off.y - (cr.top + cr.height / 2);
   if (Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05) {
@@ -464,13 +474,25 @@ function layout(state) {
   }
 
   const scale = (window.devicePixelRatio || 1) * Math.sqrt(Math.abs(m.a * m.d - m.b * m.c));
-  const sizeKey = `${w}x${h}@${scale.toFixed(3)}|${cs.objectFit}|${cs.objectPosition}`;
+  const sizeKey = `${w}x${h}+${pad.l},${pad.t},${pad.r},${pad.b}@${scale.toFixed(3)}|${cs.objectFit}|${cs.objectPosition}`;
   if (sizeKey !== state.sizeKey) {
     state.sizeKey = sizeKey;
-    canvas.width = Math.max(1, Math.round(w * scale));
-    canvas.height = Math.max(1, Math.round(h * scale));
+    canvas.width = Math.max(1, Math.round(cw * scale));
+    canvas.height = Math.max(1, Math.round(ch * scale));
     draw(state, w, h, cs, scale);
   }
+}
+
+const NO_PAD = { l: 0, t: 0, r: 0, b: 0 };
+
+/**
+ * Extra room around the image for stickers, in CSS px: mostly above (ears,
+ * the headband card), some at the sides, a little below. Capped so huge
+ * images don't get huge canvases.
+ */
+function stickerPad(w, h) {
+  const side = Math.round(Math.min(w * 0.25, 300));
+  return { l: side, r: side, t: Math.round(Math.min(h * 0.6, 600)), b: Math.round(Math.min(h * 0.1, 100)) };
 }
 
 /** 2D linear part of one element's own transform (transform, rotate, scale). */
@@ -514,7 +536,9 @@ function draw(state, w, h, cs, scale) {
   const t = amountOf(amountKey(settings.filter, settings.body?.style), settings.amounts);
   const rect = contentRect(w, h, state.natW, state.natH, cs.objectFit, cs.objectPosition);
 
-  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  // Draw in content-box coordinates; the canvas may have padding around it.
+  const pad = state.pad ?? NO_PAD;
+  ctx.setTransform(scale, 0, 0, scale, pad.l * scale, pad.t * scale);
   if (kind === 'body') return drawBody(state, ctx, rect, scale, w, h, cs, t);
   if (kind === 'faceBlur') return drawFaceBlur(state, ctx, rect, scale, w, h, cs, t);
   if (kind === 'warp') return drawWarp(state, ctx, filter, rect, scale, w, h, cs, t);
@@ -523,7 +547,7 @@ function draw(state, w, h, cs, scale) {
     const frame = faceFrame(pts);
     // Stickers are drawn in eye-distance units, so scaling it scales the sticker.
     if (filter.amount) frame.eyeDist *= stickerScale(t);
-    filter.draw(ctx, frame, pts);
+    filter.draw(ctx, frame, pts, filter.image ? { image: imageSlots[filter.image].get() } : undefined);
   }
 }
 
@@ -679,7 +703,7 @@ function drawBody(state, ctx, rect, scale, w, h, cs, t) {
     layer.fillStyle = 'rgba(255, 255, 255, 0.45)';
     layer.fillRect(rect.x, rect.y, rect.w, rect.h);
   } else if (style === 'image') {
-    const fill = bodyFillImage();
+    const fill = imageSlots.bodyImage.get();
     if (!fill) return;
     const boxes = mask.boxes.length ? mask.boxes : [{ x0: 0, y0: 0, x1: 1, y1: 1 }];
     if (!settings.bodyImage) {
@@ -714,45 +738,58 @@ function drawBody(state, ctx, rect, scale, w, h, cs, t) {
   pasteLayer(ctx, scratchA, w, h, cs, style === 'pixel' ? 1 : Math.max(0.05, t));
 }
 
-// ---------- Body image fill ----------
+// ---------- User images (body fill, headband card) ----------
 
-let fillImage = null; // ImageBitmap of the user's upload, or the default ad
-let fillFor; // settings.bodyImage value fillImage was made from
-let fillLoading = false;
+/**
+ * An image the user can upload (stored as a data: URL in settings[key]),
+ * with a built-in fallback. get() returns the ImageBitmap, or null while it's
+ * loading; everything redraws once it's ready.
+ */
+function imageSlot(key, drawFallback) {
+  let image = null;
+  let madeFrom;
+  let loading = false;
 
-/** The image for the "Image" body style; kicks off loading and returns null until ready. */
-function bodyFillImage() {
-  if (fillFor === settings.bodyImage && fillImage) return fillImage;
-  if (!fillLoading) loadFillImage();
-  return null;
-}
-
-async function loadFillImage() {
-  fillLoading = true;
-  const want = settings.bodyImage;
-  try {
-    let bitmap = null;
-    if (want) {
-      try {
-        // Decode the data: URL by hand; fetching it could trip the page's CSP.
-        const [head, b64] = want.split(',');
-        const type = /data:([^;]+)/.exec(head)?.[1] ?? 'image/png';
-        const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
-        bitmap = await createImageBitmap(new Blob([bytes], { type }));
-      } catch (err) {
-        console.debug('[face-hack] uploaded image unreadable', err);
+  async function load() {
+    loading = true;
+    const want = settings[key];
+    try {
+      let bitmap = null;
+      if (want) {
+        try {
+          // Decode the data: URL by hand; fetching it could trip the page's CSP.
+          const [head, b64] = want.split(',');
+          const type = /data:([^;]+)/.exec(head)?.[1] ?? 'image/png';
+          const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+          bitmap = await createImageBitmap(new Blob([bytes], { type }));
+        } catch (err) {
+          console.debug(`[face-hack] uploaded ${key} unreadable`, err);
+        }
       }
+      bitmap ??= (await drawFallback()).transferToImageBitmap();
+      image?.close?.();
+      image = bitmap;
+      madeFrom = want;
+    } finally {
+      loading = false;
     }
-    bitmap ??= (await drawDefaultAd()).transferToImageBitmap();
-    fillImage?.close?.();
-    fillImage = bitmap;
-    fillFor = want;
-  } finally {
-    fillLoading = false;
+    if (settings[key] !== want) return load();
+    redrawAll();
   }
-  if (settings.bodyImage !== want) return loadFillImage();
-  redrawAll();
+
+  return {
+    get() {
+      if (madeFrom === settings[key] && image) return image;
+      if (!loading) load();
+      return null;
+    },
+  };
 }
+
+const imageSlots = {
+  bodyImage: imageSlot('bodyImage', drawDefaultAd),
+  headbandImage: imageSlot('headbandImage', drawDefaultCard),
+};
 
 /**
  * The element's border-radius as inner (content-box) corner radii for
@@ -859,7 +896,7 @@ async function init() {
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
     for (const [key, { newValue }] of Object.entries(changes)) if (key in settings) settings[key] = newValue;
-    if ('bodyImage' in changes) bodyFillImage();
+    for (const key of Object.keys(imageSlots)) if (key in changes) imageSlots[key].get();
     redrawAll();
   });
 }

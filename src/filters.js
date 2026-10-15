@@ -218,6 +218,78 @@ function drawGlasses(ctx, face) {
   });
 }
 
+// ---------- Headband ----------
+// A guessing-game headband: a blue band across the forehead holding up a card
+// with a picture on it (the user's upload, or a question mark by default).
+
+const BAND = '#2d8ee6';
+const BAND_DARK = '#1c6bb5';
+
+/** Draw `image` into a rect, cropped to fill it (like object-fit: cover). */
+function drawCover(ctx, image, x, y, w, h) {
+  const k = Math.max(w / image.width, h / image.height);
+  const sw = w / k;
+  const sh = h / k;
+  ctx.drawImage(image, (image.width - sw) / 2, (image.height - sh) / 2, sw, sh, x, y, w, h);
+}
+
+function drawHeadband(ctx, face, pts, { image } = {}) {
+  inFrame(ctx, face.forehead, face, () => {
+    // The card stands up from the middle of the band; the band hides its foot.
+    const card = new Path2D();
+    card.roundRect(-0.42, -1.12, 0.84, 1.18, 0.07);
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+    ctx.shadowBlur = face.eyeDist * 0.06;
+    ctx.fillStyle = '#ffffff';
+    ctx.fill(card);
+    ctx.restore();
+    ctx.lineWidth = 0.015;
+    ctx.strokeStyle = '#cfcfd6';
+    ctx.stroke(card);
+
+    ctx.save();
+    const picture = new Path2D();
+    picture.roundRect(-0.365, -1.065, 0.73, 0.92, 0.04);
+    ctx.clip(picture);
+    if (image) {
+      drawCover(ctx, image, -0.365, -1.065, 0.73, 0.92);
+    } else {
+      ctx.fillStyle = '#ececf0';
+      ctx.fill(picture);
+    }
+    ctx.restore();
+
+    // The band curves down at the sides, following the head.
+    const band = new Path2D();
+    band.moveTo(-0.95, 0.19);
+    band.quadraticCurveTo(0, -0.21, 0.95, 0.19);
+    band.lineTo(0.95, 0.41);
+    band.quadraticCurveTo(0, 0.01, -0.95, 0.41);
+    band.closePath();
+    ctx.fillStyle = BAND;
+    ctx.fill(band);
+    ctx.lineWidth = 0.02;
+    ctx.strokeStyle = BAND_DARK;
+    ctx.stroke(band);
+    ctx.beginPath();
+    ctx.moveTo(-0.8, 0.18);
+    ctx.quadraticCurveTo(0, -0.14, 0.8, 0.18);
+    ctx.lineWidth = 0.025;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.stroke();
+
+    // The clip that holds the card.
+    const clip = new Path2D();
+    clip.roundRect(-0.2, -0.13, 0.4, 0.28, 0.05);
+    ctx.fillStyle = BAND;
+    ctx.fill(clip);
+    ctx.lineWidth = 0.02;
+    ctx.strokeStyle = BAND_DARK;
+    ctx.stroke(clip);
+  });
+}
+
 // ---------- Face blur ----------
 
 /**
@@ -293,6 +365,8 @@ export const FILTERS = {
   dog: { label: 'Dog', draw: drawDog, amount: SIZE },
   cat: { label: 'Cat', draw: drawCat, amount: SIZE },
   glasses: { label: 'Sunglasses', draw: drawGlasses, amount: SIZE },
+  // `image` names the setting holding the user's picture for this filter.
+  headband: { label: 'Headband', draw: drawHeadband, amount: SIZE, image: 'headbandImage' },
   fisheye: { label: 'Fisheye', warp: fisheye, amount: { label: 'Strength', default: 58 } },
   bigEyes: { label: 'Big eyes', warp: bigEyes, amount: { label: 'Strength', default: 63 } },
   pinch: { label: 'Tiny face', warp: pinch, amount: { label: 'Strength', default: 50 } },

@@ -17,7 +17,7 @@ Upload `release/face-hack-<version>.zip` from `npm run package`.
 **Description:**
 
 ```
-Give every face on the web dog ears, cat whiskers, sunglasses or a fisheye bulge.
+Give every face on the web dog ears, cat whiskers, sunglasses, a guessing-game headband or a fisheye bulge.
 
 Face Hack finds faces in photos and videos on any website and adds a filter on top, live. Scroll a gallery, a news site or your social feed and every face gets the treatment.
 
@@ -25,6 +25,7 @@ FILTERS
 • Dog: floppy ears and a nose, plus a tongue when the mouth is open
 • Cat: pointy ears, nose and whiskers
 • Sunglasses
+• Headband: a guessing-game headband holding up a card with any picture you upload (a question mark by default)
 • Fisheye: bulges the whole face
 • Big eyes
 • Tiny face
@@ -65,7 +66,7 @@ GOOD TO KNOW
 
 | Permission | Justification |
 | --- | --- |
-| `storage` | Saves the user's settings (filters on/off, which filter is selected, each filter's slider position, and an optional image they upload for the body filter) locally with chrome.storage.local. Nothing is synced or sent anywhere. |
+| `storage` | Saves the user's settings (filters on/off, which filter is selected, each filter's slider position, and optional images they upload for the body filter and the headband card) locally with chrome.storage.local. Nothing is synced or sent anywhere. |
 | `scripting` | Loads the bundled MediaPipe WebAssembly loader into the extension's content script only when a page has a visible image or video to process, so pages without media don't pay for it. No remote code is injected. |
 | Host permission `<all_urls>` | The extension's purpose is to add filters to images on whatever site the user is viewing, so the content script must run on all sites. The background service worker also re-fetches cross-origin images the page already displays, because the browser blocks reading their pixels otherwise. These requests are GETs to URLs taken from the page, without cookies, and the image data never leaves the device. |
 
