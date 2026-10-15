@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Face Hack",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Fun face filters for photos and videos on any website. Faces are detected on your computer and nothing is uploaded.",
   "icons": {
     "16": "icons/icon16.png",
@@ -43,6 +43,7 @@
     {
       "resources": [
         "wasm/*",
+        "fonts/*",
         "models/*"
       ],
       "matches": [

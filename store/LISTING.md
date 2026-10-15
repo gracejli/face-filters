@@ -28,12 +28,14 @@ FILTERS
 • Fisheye: bulges the whole face
 • Big eyes
 • Tiny face
+• Face blur: blurs faces and necks
+• Body blur: blocks out whole people with a color, a pixelated smear, or an image you upload (YOUR AD HERE by default)
 
 HOW TO USE
 Click the Face Hack icon in the toolbar to pick a filter or turn it off. Drag the slider to change how big the stickers are or how strong the warp is. Every photo on the page updates as you drag.
 
 PRIVATE BY DESIGN
-Face detection runs entirely on your computer using Google's MediaPipe face model, which ships inside the extension. Your images are never uploaded, there's no account, and no data is collected. The only network requests the extension makes are re-downloading images the page already shows, so it can read their pixels.
+Face and person detection run entirely on your computer using Google's MediaPipe models, which ship inside the extension. Your images are never uploaded, there's no account, and no data is collected. The only network requests the extension makes are re-downloading images the page already shows, so it can read their pixels.
 
 GOOD TO KNOW
 • Works best on front-facing faces. Faces turned to the side may not be found.
@@ -57,13 +59,13 @@ GOOD TO KNOW
 
 **Single purpose:**
 
-> Adds face filters (stickers and face distortions) to images and videos on web pages, using on-device face detection.
+> Adds playful filters to the people in images and videos on web pages (stickers, face distortions, and face or body blurs), using on-device face and person detection.
 
 **Permission justifications:**
 
 | Permission | Justification |
 | --- | --- |
-| `storage` | Saves the user's settings (filters on/off, which filter is selected, and each filter's slider position) locally with chrome.storage.local. |
+| `storage` | Saves the user's settings (filters on/off, which filter is selected, each filter's slider position, and an optional image they upload for the body filter) locally with chrome.storage.local. Nothing is synced or sent anywhere. |
 | `scripting` | Loads the bundled MediaPipe WebAssembly loader into the extension's content script only when a page has a visible image or video to process, so pages without media don't pay for it. No remote code is injected. |
 | Host permission `<all_urls>` | The extension's purpose is to add filters to images on whatever site the user is viewing, so the content script must run on all sites. The background service worker also re-fetches cross-origin images the page already displays, because the browser blocks reading their pixels otherwise. These requests are GETs to URLs taken from the page, without cookies, and the image data never leaves the device. |
 

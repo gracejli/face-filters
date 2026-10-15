@@ -18,7 +18,16 @@ export const LM = {
   betweenEyes: 168,
   rightIris: 468,
   leftIris: 473,
+  chin: 152,
+  jawLeft: 172,
+  jawRight: 397,
 };
+
+// Face outline, in order around the face (MediaPipe FACEMESH_FACE_OVAL).
+const FACE_OVAL = [
+  10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377,
+  152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109,
+];
 
 /** Scale, roll and anchors for one face, from pixel-space landmarks. */
 export function faceFrame(pts) {
@@ -209,6 +218,40 @@ function drawGlasses(ctx, face) {
   });
 }
 
+// ---------- Face blur ----------
+
+/**
+ * The face outline grown a little (to cover the hairline and ears' edges)
+ * plus a neck hanging below the jaw, as one path in pixel space.
+ */
+export function faceAndNeckPath(pts, face) {
+  const path = new Path2D();
+  const cx = FACE_OVAL.reduce((s, i) => s + pts[i].x, 0) / FACE_OVAL.length;
+  const cy = FACE_OVAL.reduce((s, i) => s + pts[i].y, 0) / FACE_OVAL.length;
+  FACE_OVAL.forEach((i, k) => {
+    const x = cx + (pts[i].x - cx) * 1.12;
+    const y = cy + (pts[i].y - cy) * 1.12;
+    if (k) path.lineTo(x, y);
+    else path.moveTo(x, y);
+  });
+  path.closePath();
+
+  // Neck: from the lower jaw, straight "down" the face (perpendicular to the
+  // eye line), about as long as the face is tall.
+  const down = { x: -Math.sin(face.angle), y: Math.cos(face.angle) };
+  const faceH = Math.hypot(pts[LM.chin].x - pts[LM.forehead].x, pts[LM.chin].y - pts[LM.forehead].y);
+  const len = faceH * 0.95;
+  const pull = (p) => ({ x: p.x + (cx - p.x) * 0.18, y: p.y + (cy - p.y) * 0.18 });
+  const l = pull(pts[LM.jawLeft]);
+  const rr = pull(pts[LM.jawRight]);
+  path.moveTo(l.x, l.y);
+  path.lineTo(rr.x, rr.y);
+  path.lineTo(rr.x + down.x * len, rr.y + down.y * len);
+  path.lineTo(l.x + down.x * len, l.y + down.y * len);
+  path.closePath();
+  return path;
+}
+
 // ---------- Debug mesh ----------
 
 function drawMesh(ctx, face, pts) {
@@ -253,15 +296,43 @@ export const FILTERS = {
   fisheye: { label: 'Fisheye', warp: fisheye, amount: { label: 'Strength', default: 58 } },
   bigEyes: { label: 'Big eyes', warp: bigEyes, amount: { label: 'Strength', default: 63 } },
   pinch: { label: 'Tiny face', warp: pinch, amount: { label: 'Strength', default: 50 } },
+  faceBlur: { label: 'Face blur', kind: 'faceBlur', amount: { label: 'Blur', default: 50 } },
+  // Body filters cover whole people (found by segmentation, not face landmarks).
+  body: {
+    label: 'Body blur',
+    kind: 'body',
+    styles: {
+      color: { label: 'Color', amount: { label: 'Opacity', default: 100 } },
+      pixel: { label: 'Pixel blur', amount: { label: 'Pixel size', default: 40 } },
+      image: { label: 'Image', amount: { label: 'Opacity', default: 100 } },
+    },
+  },
   mesh: { label: 'Landmarks', draw: drawMesh },
 };
 
-/** Slider amount for a filter as 0..1 (the saved value, else its default). */
-export function amountOf(id, amounts) {
-  const amount = FILTERS[id]?.amount;
-  if (!amount) return 0.5;
-  const v = amounts?.[id];
-  return (typeof v === 'number' ? v : amount.default) / 100;
+export const BODY_COLORS = ['#ee6f9a', '#2f7de1', '#ffffff', '#f5c400', '#1b1b1f', '#27b36a'];
+
+/** 'sticker' | 'warp' | 'faceBlur' | 'body' */
+export const kindOf = (filter) => filter?.kind ?? (filter?.warp ? 'warp' : 'sticker');
+
+/**
+ * Slider key for the current filter: the filter id, or `body.<style>` since
+ * each body style has its own slider.
+ */
+export const amountKey = (id, bodyStyle) => (FILTERS[id]?.styles ? `${id}.${bodyStyle}` : id);
+
+/** Slider definition ({label, default}) for a key, or undefined. */
+export function amountDef(key) {
+  const [id, style] = key.split('.');
+  return style ? FILTERS[id]?.styles?.[style]?.amount : FILTERS[id]?.amount;
+}
+
+/** Slider amount for a key as 0..1 (the saved value, else its default). */
+export function amountOf(key, amounts) {
+  const def = amountDef(key);
+  if (!def) return 0.5;
+  const v = amounts?.[key];
+  return (typeof v === 'number' ? v : def.default) / 100;
 }
 
 /** Sticker scale for amount t: 0.5x at 0, 1x at 0.5, 2x at 1. */

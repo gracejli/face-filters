@@ -15,7 +15,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
 import { Browser, detectBrowserPlatform, install } from '@puppeteer/browsers';
-import { FILTERS } from '../src/filters.js';
+import { FILTERS, kindOf } from '../src/filters.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
@@ -37,14 +37,26 @@ fs.cpSync(path.join(root, 'src', 'fonts'), path.join(docs, 'fonts'), { recursive
 // Shared site stylesheet (layout + self-hosted Space Mono from docs/fonts/).
 const SITE_CSS = '<link rel="stylesheet" href="style.css">';
 
-// Every user-facing filter except the debug view, in popup order.
-const filters = Object.entries(FILTERS).filter(([id]) => id !== 'mesh');
+// Example images: stickers and warps, then face blur and each body style.
+// `settings` is what the extension is set to when the example is captured.
+const FACE_EXAMPLES = Object.entries(FILTERS)
+  .filter(([id, f]) => id !== 'mesh' && ['sticker', 'warp'].includes(kindOf(f)))
+  .map(([id, f]) => ({ file: id, label: f.label, settings: { filter: id } }));
+const BLUR_EXAMPLES = [
+  { file: 'faceBlur', label: FILTERS.faceBlur.label, settings: { filter: 'faceBlur' } },
+  ...Object.entries(FILTERS.body.styles).map(([style, { label }]) => ({
+    file: `body-${style}`,
+    label: `Body: ${label.toLowerCase()}`,
+    settings: { filter: 'body', body: { style, color: '#ee6f9a' }, bodyImage: null },
+  })),
+];
 
 // ---------- docs/index.html ----------
 
-const figures = filters
-  .map(([id, f]) => `<figure><img src="examples/${id}.png" width="240" height="240" alt="${f.label} filter"><figcaption>${f.label}</figcaption></figure>`)
-  .join('\n');
+const figuresFor = (examples) =>
+  examples
+    .map(({ file, label }) => `<figure><img src="examples/${file}.png" width="240" height="240" alt="${label} filter"><figcaption>${label}</figcaption></figure>`)
+    .join('\n');
 
 fs.writeFileSync(
   path.join(docs, 'index.html'),
@@ -67,15 +79,21 @@ ${SITE_CSS}
 <div class="intro">Face Hack puts filters on the faces in photos and videos on any website. Everything happens on your computer.</div>
 
 <div class="filters">
-${figures}
+${figuresFor(FACE_EXAMPLES)}
+</div>
+
+<h2>Blur and block out</h2>
+<div class="filters two">
+${figuresFor(BLUR_EXAMPLES)}
 </div>
 
 <div class="copy">
 <h2>How it works</h2>
 <p>Turn it on and browse like normal. Face Hack finds the faces in photos and videos on the page and adds whichever filter you picked: dog ears, cat whiskers, sunglasses, a fisheye bulge, big eyes or a tiny face. Click the icon in your toolbar to switch filters, and drag the slider to make the ears bigger or the fisheye stronger. Every face on the page changes as you drag.</p>
+<p>Face blur smudges out faces and necks. Body blur finds whole people, even ones facing away, and blocks them out with a solid color, a pixelated smear, or an image of your choice. Until you upload one, everybody becomes YOUR AD HERE.</p>
 
 <h2>Private by design</h2>
-<p>Face detection runs on your computer with a face model that ships inside the extension. Your photos are never uploaded, there's no account, and nothing is tracked.</p>
+<p>Face and person detection run on your computer, with models that ship inside the extension. Your photos are never uploaded, any image you add stays in your browser, there's no account, and nothing is tracked.</p>
 </div>
 
 <footer>
@@ -138,8 +156,8 @@ try {
 
   // Examples: one fresh page per filter, captured at 2x for crisp images.
   let first = true;
-  for (const [id] of [['original'], ...filters]) {
-    await setSettings(id === 'original' ? { enabled: false } : { enabled: true, filter: id });
+  for (const { file: id, settings } of [...FACE_EXAMPLES, ...BLUR_EXAMPLES]) {
+    await setSettings({ enabled: true, ...settings });
     const page = await browser.newPage();
     await page.setViewport({ width: 240, height: 240, deviceScaleFactor: 2 });
     await page.goto(`${origin}/example.html`, { waitUntil: 'load' });

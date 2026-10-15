@@ -1,3 +1,11 @@
 // Settings live in chrome.storage.local (not .sync) so they never leave the machine.
-// amounts: filter id -> 0..100 slider value; filters without an entry use their default.
-export const DEFAULT_SETTINGS = { enabled: true, filter: 'dog', amounts: {} };
+//   amounts:   slider key (filter id, or body.<style>) -> 0..100; missing keys use defaults
+//   body:      style ('color' | 'pixel' | 'image') and fill colour for the body filter
+//   bodyImage: data: URL of the user's uploaded image for the body filter, or null
+export const DEFAULT_SETTINGS = {
+  enabled: true,
+  filter: 'dog',
+  amounts: {},
+  body: { style: 'color', color: '#ee6f9a' },
+  bodyImage: null,
+};

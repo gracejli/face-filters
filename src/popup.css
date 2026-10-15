@@ -109,6 +109,7 @@ fieldset:disabled { opacity: 0.45; }
   line-height: 1.2;
 }
 .tile svg { width: 28px; height: 28px; stroke-width: 1.6; }
+.tile b { font-weight: inherit; }
 .tile:hover span { border-color: var(--line); }
 .tile input:checked + span {
   background: var(--accent);
@@ -116,6 +117,63 @@ fieldset:disabled { opacity: 0.45; }
   font-weight: 700;
 }
 .tile input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Body filter options. */
+.body-options {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+.body-options[hidden], .swatches[hidden], .image-row[hidden] { display: none; }
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--tile);
+}
+.segment input { position: absolute; opacity: 0; }
+.segment span {
+  display: block;
+  padding: 6px 2px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 11px;
+  cursor: pointer;
+}
+.segment input:checked + span { background: var(--bg); font-weight: 700; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); }
+.segment input:focus-visible + span { outline: 2px solid var(--accent); }
+.swatches { display: flex; justify-content: space-between; padding: 0 4px; }
+.swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  padding: 0;
+}
+.swatch[aria-pressed='true'] { outline: 2px solid var(--fg); outline-offset: 2px; }
+.image-row { display: flex; align-items: center; gap: 10px; }
+.image-row img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+.image-row button {
+  flex: 1;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--tile);
+  color: var(--fg);
+  cursor: pointer;
+}
+.image-row button:hover { border-color: var(--muted); }
 
 /* Amount slider, shown only for filters that have one. */
 .amount {
