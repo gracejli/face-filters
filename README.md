@@ -3,6 +3,10 @@
 Puts Snapchat-style filters on faces in images and videos on any page. Face
 detection uses MediaPipe Face Landmarker and runs entirely on your machine.
 
+- **Install:** [Face Hack on the Chrome Web Store](https://chromewebstore.google.com/detail/face-hack/cfdhakfgjfcnkfbfhicgbdingnbppdho)
+- **Website:** https://gracejli.github.io/face-filters/
+- **Share your screenshots:** add them to the [Screenshots with Face Hack](https://www.are.na/gli/screenshots-with-facehack) channel on Are.na
+
 ## Build
 
 ```bash

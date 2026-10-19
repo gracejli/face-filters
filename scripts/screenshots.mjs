@@ -75,7 +75,7 @@ ${SITE_CSS}
 <img class="logo" src="icon128.png" alt="">
 <h1>Face Hack</h1>
 
-<p class="cta">Get the extension<br><small>(Chrome Web Store link coming soon)</small></p>
+<p class="cta"><a href="https://chromewebstore.google.com/detail/face-hack/cfdhakfgjfcnkfbfhicgbdingnbppdho">Get the extension</a><br><small>(free on the Chrome Web Store)</small></p>
 
 <div class="intro">Face Hack puts filters on the faces in photos and videos on any website. Everything happens on your computer.</div>
 
@@ -95,10 +95,13 @@ ${figuresFor(BLUR_EXAMPLES)}
 
 <h2>Private by design</h2>
 <p>Face and person detection run on your computer, with models that ship inside the extension. Your photos are never uploaded, any image you add stays in your browser, there's no account, and nothing is tracked.</p>
+
+<h2>Share your screenshots</h2>
+<p>Caught something funny with Face Hack? Add it to the <a href="https://www.are.na/gli/screenshots-with-facehack">Screenshots with Face Hack</a> channel on Are.na.</p>
 </div>
 
 <footer>
-<a href="privacy.html">Privacy policy</a> · <a href="https://github.com/gracejli/face-filters">Source on GitHub</a>
+<a href="https://chromewebstore.google.com/detail/face-hack/cfdhakfgjfcnkfbfhicgbdingnbppdho">Chrome Web Store</a> · <a href="https://www.are.na/gli/screenshots-with-facehack">Are.na</a> · <a href="privacy.html">Privacy policy</a> · <a href="https://github.com/gracejli/face-filters">Source on GitHub</a>
 </footer>
 </main>
 </body>
