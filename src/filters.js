@@ -21,6 +21,10 @@ export const LM = {
   chin: 152,
   jawLeft: 172,
   jawRight: 397,
+  mouthRight: 61, // subject's right mouth corner
+  mouthLeft: 291,
+  faceEdgeRight: 234, // outline at cheekbone height
+  faceEdgeLeft: 454,
 };
 
 // Face outline, in order around the face (MediaPipe FACEMESH_FACE_OVAL).
@@ -282,6 +286,18 @@ const fisheye = (face, pts, t) => [
 const bigEyes = (face, pts, t) =>
   [pts[LM.rightIris], pts[LM.leftIris]].map((c) => ({ x: c.x, y: c.y, r: face.eyeDist * (0.4 + 0.2 * t), s: 0.95 * t }));
 
+// Chipmunk: puff out the lower cheeks, like Photo Booth. Each bulge sits
+// over the outer cheek (most of the way from the mouth corner to the face's
+// edge), pulled down toward the jaw so the face widens at the bottom, and
+// small enough that the two don't overlap and squeeze the nose and mouth. (LM.jawLeft/jawRight are named for
+// the image's sides, so the subject's right cheek pairs with jawLeft.)
+const lerp = (a, b, k) => ({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k });
+const chipmunk = (face, pts, t) =>
+  [
+    lerp(lerp(pts[LM.mouthRight], pts[LM.faceEdgeRight], 0.68), pts[LM.jawLeft], 0.3),
+    lerp(lerp(pts[LM.mouthLeft], pts[LM.faceEdgeLeft], 0.68), pts[LM.jawRight], 0.3),
+  ].map((c) => ({ x: c.x, y: c.y, r: face.eyeDist * (0.6 + 0.15 * t), s: 0.95 * t }));
+
 const pinch = (face, pts, t) => [{ x: face.noseTip.x, y: face.noseTip.y, r: face.eyeDist * 1.6, s: -t }];
 
 // `amount` filters get a slider in the popup. For stickers it scales the
@@ -295,6 +311,7 @@ export const FILTERS = {
   glasses: { label: 'Sunglasses', draw: drawGlasses, amount: SIZE },
   fisheye: { label: 'Fisheye', warp: fisheye, amount: { label: 'Strength', default: 58 } },
   bigEyes: { label: 'Big eyes', warp: bigEyes, amount: { label: 'Strength', default: 63 } },
+  chipmunk: { label: 'Chipmunk', warp: chipmunk, amount: { label: 'Strength', default: 90 } },
   pinch: { label: 'Tiny face', warp: pinch, amount: { label: 'Strength', default: 50 } },
   faceBlur: { label: 'Face blur', kind: 'faceBlur', amount: { label: 'Blur', default: 50 } },
   // Debug view of the raw landmarks; only offered in an unpacked install (see isDevBuild).

@@ -6,6 +6,7 @@ import sunglasses from '@tabler/icons/outline/sunglasses.svg';
 import lensConvex from '@tabler/icons/outline/lens-convex.svg';
 import eye from '@tabler/icons/outline/eye.svg';
 import lensConcave from '@tabler/icons/outline/lens-concave.svg';
+import acorn from '@tabler/icons/outline/acorn.svg';
 import grain from '@tabler/icons/outline/grain.svg';
 import faceBlur from './popup-icons/face-blur.svg';
 
@@ -15,6 +16,7 @@ const ICONS = {
   glasses: sunglasses,
   fisheye: lensConvex,
   bigEyes: eye,
+  chipmunk: acorn,
   pinch: lensConcave,
   faceBlur,
   mesh: grain,

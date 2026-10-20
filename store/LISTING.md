@@ -27,6 +27,7 @@ FILTERS
 • Sunglasses
 • Fisheye: bulges the whole face
 • Big eyes
+• Chipmunk: puffs out both cheeks
 • Tiny face
 • Face blur: blurs faces and necks
 
