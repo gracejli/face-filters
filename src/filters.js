@@ -282,12 +282,12 @@ const fisheye = (face, pts, t) => [
 const bigEyes = (face, pts, t) =>
   [pts[LM.rightIris], pts[LM.leftIris]].map((c) => ({ x: c.x, y: c.y, r: face.eyeDist * (0.4 + 0.2 * t), s: 0.95 * t }));
 
-// Chipmunk: like Photo Booth, the whole lower face (cheeks, mouth and jaw)
-// swells as one, as if the cheeks were stuffed. A single bulge centred
+// Big mouth: like Photo Booth's Chipmunk, the whole lower face (cheeks, mouth
+// and jaw) swells as one. A single bulge centred
 // between the nose tip and the chin; two separate cheek bulges would stretch
 // the mouth apart and pinch the middle of the face.
 const lerp = (a, b, k) => ({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k });
-const chipmunk = (face, pts, t) => {
+const bigMouth = (face, pts, t) => {
   const c = lerp(face.noseTip, pts[LM.chin], 0.45);
   return [{ x: c.x, y: c.y, r: face.eyeDist * (1.3 + 0.3 * t), s: 0.8 * t }];
 };
@@ -305,7 +305,7 @@ export const FILTERS = {
   glasses: { label: 'Sunglasses', draw: drawGlasses, amount: SIZE },
   fisheye: { label: 'Fisheye', warp: fisheye, amount: { label: 'Strength', default: 58 } },
   bigEyes: { label: 'Big eyes', warp: bigEyes, amount: { label: 'Strength', default: 63 } },
-  chipmunk: { label: 'Chipmunk', warp: chipmunk, amount: { label: 'Strength', default: 90 } },
+  bigMouth: { label: 'Big mouth', warp: bigMouth, amount: { label: 'Strength', default: 90 } },
   pinch: { label: 'Tiny face', warp: pinch, amount: { label: 'Strength', default: 50 } },
   faceBlur: { label: 'Face blur', kind: 'faceBlur', amount: { label: 'Blur', default: 50 } },
   // Debug view of the raw landmarks; only offered in an unpacked install (see isDevBuild).

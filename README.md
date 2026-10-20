@@ -44,7 +44,7 @@ install has.
 | `src/content.js` | Finds `<img>`/`<video>` (MutationObserver), processes only visible ones (IntersectionObserver), and draws on a canvas inserted right after each image, so popups, sticky headers and carousels that cover or clip the image do the same to the filter. Runs video detection with `requestVideoFrameCallback` at 15 fps. |
 | `src/detector.js` | MediaPipe Face Landmarker (images also scanned in overlapping quarters to catch small faces) GPU with CPU fallback. Decodes images to an untainted `ImageBitmap`. |
 | `src/background.js` | Fetches cross-origin images for the content script and injects MediaPipe's WASM loader on demand. |
-| `src/filters.js` | Filter definitions: stickers (dog, cat, sunglasses, plus a Landmarks debug view shown only in unpacked installs) drawn with Canvas 2D paths, warps (fisheye, big eyes, chipmunk, tiny face) defined as bulges, and face blur (face + neck outline). |
+| `src/filters.js` | Filter definitions: stickers (dog, cat, sunglasses, plus a Landmarks debug view shown only in unpacked installs) drawn with Canvas 2D paths, warps (fisheye, big eyes, big mouth, tiny face) defined as bulges, and face blur (face + neck outline). |
 | `src/warp.js` | One shared WebGL2 context that renders an image or video frame with bulge distortions; the result is pasted onto the overlay canvas. |
 | `src/popup.*` | On/off toggle, a grid of filter tiles (Tabler icons, inlined at build time) and an amount slider for filters that define one (size for stickers, strength for warps). Settings live in `chrome.storage.local`. |
 

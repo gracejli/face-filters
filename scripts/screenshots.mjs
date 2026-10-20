@@ -78,7 +78,7 @@ ${figuresFor(EXAMPLES)}
 <h2>About</h2>
 <p>How we present ourselves online has shifted to optimize, adjust, and perfect - leading to phenomenons like mewing, biohacking, and micro-beauty treatments to optimize our appearance for reach, trust, or growth. This chrome extension hacks every single face that it detects on the feed, satirizing, playing, remixing, or omitting identity altogether from the content that we consume. </p>
 <h2>How it Works</h2>
-<p>Turn it on and browse like normal. Face Hack finds the faces in photos and videos on the page and adds whichever filter you picked: dog ears, cat whiskers, sunglasses, a fisheye bulge, big eyes, chipmunk cheeks, a tiny face, or a face blur. Click the icon in your toolbar to switch filters, and drag the slider to make the ears bigger or the fisheye stronger. Every face on the page changes as you drag.</p>
+<p>Turn it on and browse like normal. Face Hack finds the faces in photos and videos on the page and adds whichever filter you picked: dog ears, cat whiskers, sunglasses, a fisheye bulge, big eyes, a big mouth, a tiny face, or a face blur. Click the icon in your toolbar to switch filters, and drag the slider to make the ears bigger or the fisheye stronger. Every face on the page changes as you drag.</p>
 <p>Face blur smudges out faces and necks; drag the slider from a soft haze to an unrecognisable smear.</p>
 
 <h2>Private by design!</h2>
