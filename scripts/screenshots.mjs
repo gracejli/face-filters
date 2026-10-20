@@ -9,6 +9,7 @@
 // Usage: npm run build && npm run screenshots
 // The first run downloads Chrome for Testing into .cache/ (~150 MB).
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
@@ -35,7 +36,13 @@ fs.copyFileSync(path.join(root, 'src', 'icons', 'icon128.png'), path.join(docs, 
 fs.cpSync(path.join(root, 'src', 'fonts'), path.join(docs, 'fonts'), { recursive: true });
 
 // Shared site stylesheet (layout + self-hosted Space Mono from docs/fonts/).
-const SITE_CSS = '<link rel="stylesheet" href="style.css">';
+// The ?v= hash changes whenever style.css does, so browsers fetch the new
+// styles right away instead of reusing a cached copy (Pages caches 10 min).
+const cssVersion = crypto.createHash('sha1').update(fs.readFileSync(path.join(docs, 'style.css'))).digest('hex').slice(0, 8);
+const SITE_CSS = `<link rel="stylesheet" href="style.css?v=${cssVersion}">`;
+// The privacy page is hand-written; keep its stylesheet link in step.
+const privacyPath = path.join(docs, 'privacy.html');
+fs.writeFileSync(privacyPath, fs.readFileSync(privacyPath, 'utf8').replace(/<link rel="stylesheet" href="style\.css[^"]*">/, SITE_CSS));
 
 // Example images, one per filter in popup order. Debug-only filters are left
 // out. `settings` is what the extension is set to when it's captured.
