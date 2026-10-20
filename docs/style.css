@@ -44,7 +44,7 @@ h2 {
   display: inline-block;
   padding: 14px 30px;
   border: 2px solid #000;
-  border-radius: 999px;
+  border-radius: 0;
   background: #000;
   color: #fff;
   font-weight: 700;
@@ -69,10 +69,8 @@ h2 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
-.filters.one { grid-template-columns: minmax(0, 190px); justify-content: center; }
 @media (max-width: 480px) {
   .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .filters.one { grid-template-columns: minmax(0, 50%); }
 }
 figure {
   margin: 0;

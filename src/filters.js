@@ -21,10 +21,6 @@ export const LM = {
   chin: 152,
   jawLeft: 172,
   jawRight: 397,
-  mouthRight: 61, // subject's right mouth corner
-  mouthLeft: 291,
-  faceEdgeRight: 234, // outline at cheekbone height
-  faceEdgeLeft: 454,
 };
 
 // Face outline, in order around the face (MediaPipe FACEMESH_FACE_OVAL).
@@ -286,17 +282,15 @@ const fisheye = (face, pts, t) => [
 const bigEyes = (face, pts, t) =>
   [pts[LM.rightIris], pts[LM.leftIris]].map((c) => ({ x: c.x, y: c.y, r: face.eyeDist * (0.4 + 0.2 * t), s: 0.95 * t }));
 
-// Chipmunk: puff out the lower cheeks, like Photo Booth. Each bulge sits
-// over the outer cheek (most of the way from the mouth corner to the face's
-// edge), pulled down toward the jaw so the face widens at the bottom, and
-// small enough that the two don't overlap and squeeze the nose and mouth. (LM.jawLeft/jawRight are named for
-// the image's sides, so the subject's right cheek pairs with jawLeft.)
+// Chipmunk: like Photo Booth, the whole lower face (cheeks, mouth and jaw)
+// swells as one, as if the cheeks were stuffed. A single bulge centred
+// between the nose tip and the chin; two separate cheek bulges would stretch
+// the mouth apart and pinch the middle of the face.
 const lerp = (a, b, k) => ({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k });
-const chipmunk = (face, pts, t) =>
-  [
-    lerp(lerp(pts[LM.mouthRight], pts[LM.faceEdgeRight], 0.68), pts[LM.jawLeft], 0.3),
-    lerp(lerp(pts[LM.mouthLeft], pts[LM.faceEdgeLeft], 0.68), pts[LM.jawRight], 0.3),
-  ].map((c) => ({ x: c.x, y: c.y, r: face.eyeDist * (0.6 + 0.15 * t), s: 0.95 * t }));
+const chipmunk = (face, pts, t) => {
+  const c = lerp(face.noseTip, pts[LM.chin], 0.45);
+  return [{ x: c.x, y: c.y, r: face.eyeDist * (1.3 + 0.3 * t), s: 0.8 * t }];
+};
 
 const pinch = (face, pts, t) => [{ x: face.noseTip.x, y: face.noseTip.y, r: face.eyeDist * 1.6, s: -t }];
 

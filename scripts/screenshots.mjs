@@ -15,7 +15,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer-core';
 import { Browser, detectBrowserPlatform, install } from '@puppeteer/browsers';
-import { FILTERS, kindOf } from '../src/filters.js';
+import { FILTERS } from '../src/filters.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
@@ -37,12 +37,11 @@ fs.cpSync(path.join(root, 'src', 'fonts'), path.join(docs, 'fonts'), { recursive
 // Shared site stylesheet (layout + self-hosted Space Mono from docs/fonts/).
 const SITE_CSS = '<link rel="stylesheet" href="style.css">';
 
-// Example images: stickers and warps, then face blur. Debug-only filters are
-// left out. `settings` is what the extension is set to when it's captured.
-const FACE_EXAMPLES = Object.entries(FILTERS)
-  .filter(([, f]) => !f.dev && ['sticker', 'warp'].includes(kindOf(f)))
+// Example images, one per filter in popup order. Debug-only filters are left
+// out. `settings` is what the extension is set to when it's captured.
+const EXAMPLES = Object.entries(FILTERS)
+  .filter(([, f]) => !f.dev)
   .map(([id, f]) => ({ file: id, label: f.label, settings: { filter: id } }));
-const BLUR_EXAMPLES = [{ file: 'faceBlur', label: FILTERS.faceBlur.label, settings: { filter: 'faceBlur' } }];
 
 // ---------- docs/index.html ----------
 
@@ -72,12 +71,7 @@ ${SITE_CSS}
 <div class="intro">Face Hack puts filters on the faces in photos and videos on any website. Everything happens on your computer.</div>
 
 <div class="filters">
-${figuresFor(FACE_EXAMPLES)}
-</div>
-
-<h2>Blur</h2>
-<div class="filters one">
-${figuresFor(BLUR_EXAMPLES)}
+${figuresFor(EXAMPLES)}
 </div>
 
 <div class="copy">
@@ -154,7 +148,7 @@ try {
 
   // Examples: one fresh page per filter, captured at 2x for crisp images.
   let first = true;
-  for (const { file: id, settings } of [...FACE_EXAMPLES, ...BLUR_EXAMPLES]) {
+  for (const { file: id, settings } of EXAMPLES) {
     await setSettings({ enabled: true, ...settings });
     const page = await browser.newPage();
     await page.setViewport({ width: 240, height: 240, deviceScaleFactor: 2 });
