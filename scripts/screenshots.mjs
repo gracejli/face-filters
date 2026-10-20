@@ -81,9 +81,9 @@ ${figuresFor(EXAMPLES)}
 <h2>Private, Local</h2>
 <p>Face detection runs on your computer, with a model that ships inside the extension. Your photos are never uploaded and nothing is tracked.</p>
 
-<h2>Share your screenshots</h2>
-<p>Caught something funny with Face Hack? Add it to the <a href="https://www.are.na/gli/screenshots-with-facehack">Screenshots with Face Hack</a> channel on Are.na.</p>
 </div>
+
+<p class="arena"><a class="button" href="https://www.are.na/gli/screenshots-with-facehack">Public Are.na Face Hack screenshot channel</a></p>
 
 <footer>
 <a href="https://chromewebstore.google.com/detail/face-hack/cfdhakfgjfcnkfbfhicgbdingnbppdho">Chrome Web Store</a> · <a href="https://www.are.na/gli/screenshots-with-facehack">Are.na</a> · <a href="privacy.html">Privacy policy</a> · <a href="https://github.com/gracejli/face-filters">Source on GitHub</a>

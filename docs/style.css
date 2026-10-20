@@ -45,18 +45,16 @@ h2 {
   padding: 14px 30px;
   border: 2px solid #000;
   border-radius: 0;
-  background: #000;
-  color: #fff;
+  background: #fff;
+  color: #000;
   font-weight: 700;
   font-size: 18px;
   text-decoration: none;
   text-transform: uppercase;
-  box-shadow: 4px 4px 0 #f5c400;
-  transition: transform 0.1s, box-shadow 0.1s;
 }
-.button:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #f5c400; }
-.button:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #f5c400; }
-.button:focus-visible { outline: 3px solid #f5c400; outline-offset: 3px; }
+.button:hover { background: #000; color: #fff; }
+.button:focus-visible { outline: 2px solid #000; outline-offset: 3px; }
+.arena { margin: 48px 0 0; }
 
 .intro {
   border: 1px solid #000;
