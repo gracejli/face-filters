@@ -2,11 +2,9 @@
 // the selected filter on a canvas overlaid on each element.
 
 import { DEFAULT_SETTINGS } from './settings.js';
-import { FILTERS, amountKey, amountOf, faceAndNeckPath, faceFrame, kindOf, stickerScale } from './filters.js';
-import { detectFaces, detectFacesInImage, loadBitmap, segmentPeople } from './detector.js';
+import { FILTERS, amountOf, faceAndNeckPath, faceFrame, isDevBuild, kindOf, stickerScale } from './filters.js';
+import { detectFaces, detectFacesInImage, loadBitmap } from './detector.js';
 import { renderWarp } from './warp.js';
-import { drawDefaultAd } from './ad.js';
-import { drawDefaultCard } from './card.js';
 
 const MIN_SIZE = 64;
 const VIDEO_FPS = 15;
@@ -14,9 +12,6 @@ const CACHE_LIMIT = 300;
 // Warps show real pixels, so keep more resolution than detection needs.
 const WARP_MAX_DIM = 2048;
 const MAX_WARP_OUTPUT = 4096;
-// Person segmentation input size (DeepLab runs at 257px internally).
-const SEGMENT_DIM = 512;
-const MASK_CACHE_LIMIT = 40;
 
 let settings = { ...DEFAULT_SETTINGS };
 
@@ -24,8 +19,6 @@ let settings = { ...DEFAULT_SETTINGS };
 const tracked = new Map();
 /** src -> Promise<faces[]>; failures resolve to [] so we don't refetch them. */
 const resultCache = new Map();
-/** src -> Promise<PeopleMask|null> for the body filter. */
-const maskCache = new Map();
 
 // ---------- Overlay canvases ----------
 //
@@ -76,8 +69,6 @@ const anchorOf = (el) => (el.parentElement instanceof HTMLPictureElement ? el.pa
  * @property {number} lastRun
  * @property {boolean} busy
  * @property {boolean} unusable    e.g. cross-origin video without CORS
- * @property {PeopleMask|null} mask  where people are, for the body filter
- * @property {string|null} maskSrc   src the current mask belongs to
  * @property {ImageBitmap|null} bitmap  untainted pixels for pixel filters (images only)
  * @property {boolean} bitmapLoading
  */
@@ -91,7 +82,7 @@ function track(el) {
   const state = {
     el, canvas, visible: false, src: null, faces: null, natW: 0, natH: 0, sizeKey: '', posX: 0, posY: 0,
     videoRunning: false, videoHandle: 0, lastRun: 0, busy: false, unusable: false,
-    bitmap: null, bitmapLoading: false, mask: null, maskSrc: null,
+    bitmap: null, bitmapLoading: false,
   };
   tracked.set(el, state);
   intersection.observe(el);
@@ -118,8 +109,6 @@ function untrack(el) {
 function resetFaces(state) {
   state.faces = null;
   state.src = null;
-  state.mask = null;
-  state.maskSrc = null;
   state.unusable = false;
   releaseBitmap(state);
   render(state);
@@ -195,97 +184,12 @@ async function processImage(state) {
   state.natW = img.naturalWidth;
   state.natH = img.naturalHeight;
 
-  if (currentKind() === 'body') {
-    if (src === state.maskSrc) return;
-    state.maskSrc = src;
-    const mask = await cachedSegment(img, src);
-    if (state.maskSrc !== src) return; // src changed while we were busy
-    state.mask = mask;
-  } else {
-    if (src === state.src) return;
-    state.src = src;
-    const faces = await cachedDetect(img, src);
-    if (state.src !== src) return;
-    state.faces = faces;
-  }
+  if (src === state.src) return;
+  state.src = src;
+  const faces = await cachedDetect(img, src);
+  if (state.src !== src) return; // src changed while we were busy
+  state.faces = faces;
   render(state);
-}
-
-function cachedSegment(img, src) {
-  let p = maskCache.get(src);
-  if (p) {
-    maskCache.delete(src);
-    maskCache.set(src, p);
-    return p;
-  }
-  p = (async () => {
-    const bitmap = await loadBitmap(img, src, SEGMENT_DIM);
-    try {
-      return toPeopleMask(await segmentPeople(bitmap));
-    } finally {
-      bitmap.close();
-    }
-  })().catch((err) => {
-    console.debug('[face-hack] segmentation skipped', src.slice(0, 120), err?.message ?? err);
-    return null;
-  });
-  maskCache.set(src, p);
-  if (maskCache.size > MASK_CACHE_LIMIT) maskCache.delete(maskCache.keys().next().value);
-  return p;
-}
-
-/**
- * @typedef {object} PeopleMask
- * @property {OffscreenCanvas} canvas  white, alpha = person (soft edges)
- * @property {Array<{x0:number,y0:number,x1:number,y1:number}>} boxes  one per
- *   separate person blob, normalized 0..1, for fitting an image into each
- */
-function toPeopleMask(seg) {
-  if (!seg) return null;
-  const { width: w, height: h, alpha } = seg;
-  const canvas = new OffscreenCanvas(w, h);
-  const data = new ImageData(w, h);
-  for (let i = 0; i < alpha.length; i++) {
-    data.data[i * 4] = data.data[i * 4 + 1] = data.data[i * 4 + 2] = 255;
-    data.data[i * 4 + 3] = alpha[i];
-  }
-  canvas.getContext('2d').putImageData(data, 0, 0);
-  return { canvas, boxes: personBoxes(alpha, w, h) };
-}
-
-/** Bounding boxes of separate people: connected blobs on a coarse grid. */
-function personBoxes(alpha, w, h) {
-  const step = Math.max(1, Math.ceil(Math.max(w, h) / 96));
-  const gw = Math.ceil(w / step);
-  const gh = Math.ceil(h / step);
-  const on = new Uint8Array(gw * gh);
-  for (let gy = 0; gy < gh; gy++) {
-    for (let gx = 0; gx < gw; gx++) on[gy * gw + gx] = alpha[Math.min(h - 1, gy * step) * w + Math.min(w - 1, gx * step)] > 127 ? 1 : 0;
-  }
-  const seen = new Uint8Array(gw * gh);
-  const minCells = Math.max(4, gw * gh * 0.002);
-  const boxes = [];
-  for (let start = 0; start < on.length; start++) {
-    if (!on[start] || seen[start]) continue;
-    let x0 = gw, y0 = gh, x1 = 0, y1 = 0, n = 0;
-    const stack = [start];
-    seen[start] = 1;
-    while (stack.length) {
-      const i = stack.pop();
-      const x = i % gw;
-      const y = (i / gw) | 0;
-      n++;
-      x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
-      for (const j of [i - 1, i + 1, i - gw, i + gw]) {
-        if (j < 0 || j >= on.length || seen[j] || !on[j]) continue;
-        if ((j === i - 1 || j === i + 1) && ((j / gw) | 0) !== y) continue; // no row wrap
-        seen[j] = 1;
-        stack.push(j);
-      }
-    }
-    if (n >= minCells) boxes.push({ x0: x0 / gw, y0: y0 / gh, x1: (x1 + 1) / gw, y1: (y1 + 1) / gh });
-  }
-  return boxes;
 }
 
 function cachedDetect(img, src) {
@@ -320,8 +224,8 @@ function startVideo(state) {
   const tick = (now) => {
     if (!state.videoRunning) return;
     state.videoHandle = video.requestVideoFrameCallback(tick);
-    // Filters that show the video's own pixels (warps, blurs) redraw every
-    // frame, reusing the latest landmarks/mask, or they'd stutter at
+    // Filters that show the video's own pixels (warps, face blur) redraw
+    // every frame, reusing the latest landmarks, or they'd stutter at
     // detection rate.
     if (needsLivePixels() && hasContent(state)) render(state);
     if (state.busy || now - state.lastRun < interval) return;
@@ -344,15 +248,9 @@ async function detectVideoFrame(state) {
   if (video.readyState < 2 || video.videoWidth < MIN_SIZE || video.videoHeight < MIN_SIZE) return;
   state.busy = true;
   try {
-    if (currentKind() === 'body') {
-      const mask = toPeopleMask(await segmentPeople(videoFrameForSegmentation(video)));
-      if (!state.videoRunning) return;
-      state.mask = mask;
-    } else {
-      const faces = await detectFaces(video);
-      if (!state.videoRunning) return;
-      state.faces = faces;
-    }
+    const faces = await detectFaces(video);
+    if (!state.videoRunning) return;
+    state.faces = faces;
     state.natW = video.videoWidth;
     state.natH = video.videoHeight;
     render(state);
@@ -368,31 +266,15 @@ async function detectVideoFrame(state) {
   }
 }
 
-/** A small copy of the current video frame (segmentation doesn't need more). */
-let frameCanvas = null;
-function videoFrameForSegmentation(video) {
-  const k = Math.min(1, SEGMENT_DIM / Math.max(video.videoWidth, video.videoHeight));
-  const w = Math.max(1, Math.round(video.videoWidth * k));
-  const h = Math.max(1, Math.round(video.videoHeight * k));
-  frameCanvas ??= new OffscreenCanvas(w, h);
-  if (frameCanvas.width !== w || frameCanvas.height !== h) {
-    frameCanvas.width = w;
-    frameCanvas.height = h;
-  }
-  frameCanvas.getContext('2d').drawImage(video, 0, 0, w, h);
-  return frameCanvas;
-}
-
 const currentKind = () => kindOf(currentFilter());
 
 /** Whether the current filter has something to draw for this element. */
-const hasContent = (state) => (currentKind() === 'body' ? !!state.mask : !!state.faces?.length);
+const hasContent = (state) => !!state.faces?.length;
 
 /** Whether the current filter draws the media's own pixels (so needs them, and redraws per video frame). */
 function needsLivePixels() {
   const kind = currentKind();
-  if (kind === 'warp' || kind === 'faceBlur') return true;
-  return kind === 'body' && settings.body?.style === 'pixel';
+  return kind === 'warp' || kind === 'faceBlur';
 }
 
 // ---------- Layout & drawing ----------
@@ -430,7 +312,7 @@ function layout(state) {
     return;
   }
 
-  // Stickers (ears, the headband's card) stick out past the top of the head,
+  // Stickers (ears) stick out past the top of the head,
   // which is often the top of the photo, so their canvas extends beyond the
   // image. Everything else is a patch of the image and stays inside it.
   const pad = currentKind() === 'sticker' ? stickerPad(w, h) : NO_PAD;
@@ -486,8 +368,8 @@ function layout(state) {
 const NO_PAD = { l: 0, t: 0, r: 0, b: 0 };
 
 /**
- * Extra room around the image for stickers, in CSS px: mostly above (ears,
- * the headband card), some at the sides, a little below. Capped so huge
+ * Extra room around the image for stickers, in CSS px: mostly above (ears),
+ * some at the sides, a little below. Capped so huge
  * images don't get huge canvases.
  */
 function stickerPad(w, h) {
@@ -533,13 +415,12 @@ function draw(state, w, h, cs, scale) {
   if (!state.natW) return;
   const filter = currentFilter();
   const kind = kindOf(filter);
-  const t = amountOf(amountKey(settings.filter, settings.body?.style), settings.amounts);
+  const t = amountOf(settings.filter, settings.amounts);
   const rect = contentRect(w, h, state.natW, state.natH, cs.objectFit, cs.objectPosition);
 
   // Draw in content-box coordinates; the canvas may have padding around it.
   const pad = state.pad ?? NO_PAD;
   ctx.setTransform(scale, 0, 0, scale, pad.l * scale, pad.t * scale);
-  if (kind === 'body') return drawBody(state, ctx, rect, scale, w, h, cs, t);
   if (kind === 'faceBlur') return drawFaceBlur(state, ctx, rect, scale, w, h, cs, t);
   if (kind === 'warp') return drawWarp(state, ctx, filter, rect, scale, w, h, cs, t);
   for (const face of state.faces) {
@@ -547,12 +428,14 @@ function draw(state, w, h, cs, scale) {
     const frame = faceFrame(pts);
     // Stickers are drawn in eye-distance units, so scaling it scales the sticker.
     if (filter.amount) frame.eyeDist *= stickerScale(t);
-    filter.draw(ctx, frame, pts, filter.image ? { image: imageSlots[filter.image].get() } : undefined);
+    filter.draw(ctx, frame, pts);
   }
 }
 
 function currentFilter() {
-  return FILTERS[settings.filter] ?? FILTERS.dog;
+  const filter = FILTERS[settings.filter];
+  // Debug-only filters are ignored outside an unpacked (developer) install.
+  return filter && (!filter.dev || isDevBuild()) ? filter : FILTERS.dog;
 }
 
 /**
@@ -615,10 +498,9 @@ function drawWarp(state, ctx, filter, rect, scale, w, h, cs, t) {
   ctx.restore();
 }
 
-// Scratch canvases for compositing. Drawing is synchronous, so one set is
+// Scratch canvas for compositing. Drawing is synchronous, so one is
 // shared by every overlay.
 const scratchA = new OffscreenCanvas(1, 1);
-const scratchB = new OffscreenCanvas(1, 1);
 function scratch(canvas, w, h) {
   if (canvas.width !== w || canvas.height !== h) {
     canvas.width = w;
@@ -634,7 +516,7 @@ function scratch(canvas, w, h) {
   return c;
 }
 
-/** The pixels to blur/pixelate: the playing video, or the decoded image. */
+/** The pixels to blur: the playing video, or the decoded image. */
 function pixelSource(state) {
   if (state.el instanceof HTMLVideoElement) return state.el;
   if (!state.bitmap) ensureBitmap(state);
@@ -677,119 +559,6 @@ function drawFaceBlur(state, ctx, rect, scale, w, h, cs, t) {
     pasteLayer(ctx, scratchA, w, h, cs);
   }
 }
-
-/** Body: cover every person in the mask with a colour, pixels, or an image. */
-function drawBody(state, ctx, rect, scale, w, h, cs, t) {
-  const { mask } = state;
-  const style = settings.body?.style ?? 'color';
-  const W = Math.max(1, Math.round(w * scale));
-  const H = Math.max(1, Math.round(h * scale));
-  const layer = scratch(scratchA, W, H);
-  layer.setTransform(scale, 0, 0, scale, 0, 0);
-
-  if (style === 'pixel') {
-    const source = pixelSource(state);
-    if (!source) return;
-    // Pixelate by shrinking then scaling back up without smoothing, then wash
-    // it out toward white like a censored crowd shot.
-    const block = Math.max(3, (0.005 + 0.05 * t) * Math.max(rect.w, rect.h));
-    const sw = Math.max(1, Math.round(rect.w / block));
-    const sh = Math.max(1, Math.round(rect.h / block));
-    const small = scratch(scratchB, sw, sh);
-    small.drawImage(source, 0, 0, sw, sh);
-    layer.imageSmoothingEnabled = false;
-    layer.drawImage(scratchB, 0, 0, sw, sh, rect.x, rect.y, rect.w, rect.h);
-    layer.imageSmoothingEnabled = true;
-    layer.fillStyle = 'rgba(255, 255, 255, 0.45)';
-    layer.fillRect(rect.x, rect.y, rect.w, rect.h);
-  } else if (style === 'image') {
-    const fill = imageSlots.bodyImage.get();
-    if (!fill) return;
-    const boxes = mask.boxes.length ? mask.boxes : [{ x0: 0, y0: 0, x1: 1, y1: 1 }];
-    if (!settings.bodyImage) {
-      // The default "YOUR AD HERE" is a repeating pattern, so it reads inside
-      // any silhouette. Size the text to the people in the image.
-      const tallest = Math.max(...boxes.map((b) => (b.y1 - b.y0) * rect.h));
-      const k = Math.max(0.05, tallest / 7 / fill.height);
-      const pattern = layer.createPattern(fill, 'repeat');
-      pattern.setTransform(new DOMMatrix().translateSelf(rect.x, rect.y).scaleSelf(k, k));
-      layer.fillStyle = pattern;
-      layer.fillRect(rect.x, rect.y, rect.w, rect.h);
-    }
-    for (const b of settings.bodyImage ? boxes : []) {
-      // Cover-fit the image into each person's bounding box.
-      const bx = rect.x + b.x0 * rect.w;
-      const by = rect.y + b.y0 * rect.h;
-      const bw = (b.x1 - b.x0) * rect.w;
-      const bh = (b.y1 - b.y0) * rect.h;
-      const k = Math.max(bw / fill.width, bh / fill.height);
-      const fw = fill.width * k;
-      const fh = fill.height * k;
-      layer.drawImage(fill, bx + (bw - fw) / 2, by + (bh - fh) / 2, fw, fh);
-    }
-  } else {
-    layer.fillStyle = settings.body?.color ?? '#ee6f9a';
-    layer.fillRect(rect.x, rect.y, rect.w, rect.h);
-  }
-
-  // Keep only the people. The mask is low-res, so smoothing it up gives soft edges.
-  layer.globalCompositeOperation = 'destination-in';
-  layer.drawImage(mask.canvas, rect.x, rect.y, rect.w, rect.h);
-  pasteLayer(ctx, scratchA, w, h, cs, style === 'pixel' ? 1 : Math.max(0.05, t));
-}
-
-// ---------- User images (body fill, headband card) ----------
-
-/**
- * An image the user can upload (stored as a data: URL in settings[key]),
- * with a built-in fallback. get() returns the ImageBitmap, or null while it's
- * loading; everything redraws once it's ready.
- */
-function imageSlot(key, drawFallback) {
-  let image = null;
-  let madeFrom;
-  let loading = false;
-
-  async function load() {
-    loading = true;
-    const want = settings[key];
-    try {
-      let bitmap = null;
-      if (want) {
-        try {
-          // Decode the data: URL by hand; fetching it could trip the page's CSP.
-          const [head, b64] = want.split(',');
-          const type = /data:([^;]+)/.exec(head)?.[1] ?? 'image/png';
-          const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
-          bitmap = await createImageBitmap(new Blob([bytes], { type }));
-        } catch (err) {
-          console.debug(`[face-hack] uploaded ${key} unreadable`, err);
-        }
-      }
-      bitmap ??= (await drawFallback()).transferToImageBitmap();
-      image?.close?.();
-      image = bitmap;
-      madeFrom = want;
-    } finally {
-      loading = false;
-    }
-    if (settings[key] !== want) return load();
-    redrawAll();
-  }
-
-  return {
-    get() {
-      if (madeFrom === settings[key] && image) return image;
-      if (!loading) load();
-      return null;
-    },
-  };
-}
-
-const imageSlots = {
-  bodyImage: imageSlot('bodyImage', drawDefaultAd),
-  headbandImage: imageSlot('headbandImage', drawDefaultCard),
-};
 
 /**
  * The element's border-radius as inner (content-box) corner radii for
@@ -896,7 +665,6 @@ async function init() {
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
     for (const [key, { newValue }] of Object.entries(changes)) if (key in settings) settings[key] = newValue;
-    for (const key of Object.keys(imageSlots)) if (key in changes) imageSlots[key].get();
     redrawAll();
   });
 }

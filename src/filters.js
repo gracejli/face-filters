@@ -218,78 +218,6 @@ function drawGlasses(ctx, face) {
   });
 }
 
-// ---------- Headband ----------
-// A guessing-game headband: a blue band across the forehead holding up a card
-// with a picture on it (the user's upload, or a question mark by default).
-
-const BAND = '#2d8ee6';
-const BAND_DARK = '#1c6bb5';
-
-/** Draw `image` into a rect, cropped to fill it (like object-fit: cover). */
-function drawCover(ctx, image, x, y, w, h) {
-  const k = Math.max(w / image.width, h / image.height);
-  const sw = w / k;
-  const sh = h / k;
-  ctx.drawImage(image, (image.width - sw) / 2, (image.height - sh) / 2, sw, sh, x, y, w, h);
-}
-
-function drawHeadband(ctx, face, pts, { image } = {}) {
-  inFrame(ctx, face.forehead, face, () => {
-    // The card stands up from the middle of the band; the band hides its foot.
-    const card = new Path2D();
-    card.roundRect(-0.42, -1.12, 0.84, 1.18, 0.07);
-    ctx.save();
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
-    ctx.shadowBlur = face.eyeDist * 0.06;
-    ctx.fillStyle = '#ffffff';
-    ctx.fill(card);
-    ctx.restore();
-    ctx.lineWidth = 0.015;
-    ctx.strokeStyle = '#cfcfd6';
-    ctx.stroke(card);
-
-    ctx.save();
-    const picture = new Path2D();
-    picture.roundRect(-0.365, -1.065, 0.73, 0.92, 0.04);
-    ctx.clip(picture);
-    if (image) {
-      drawCover(ctx, image, -0.365, -1.065, 0.73, 0.92);
-    } else {
-      ctx.fillStyle = '#ececf0';
-      ctx.fill(picture);
-    }
-    ctx.restore();
-
-    // The band curves down at the sides, following the head.
-    const band = new Path2D();
-    band.moveTo(-0.95, 0.19);
-    band.quadraticCurveTo(0, -0.21, 0.95, 0.19);
-    band.lineTo(0.95, 0.41);
-    band.quadraticCurveTo(0, 0.01, -0.95, 0.41);
-    band.closePath();
-    ctx.fillStyle = BAND;
-    ctx.fill(band);
-    ctx.lineWidth = 0.02;
-    ctx.strokeStyle = BAND_DARK;
-    ctx.stroke(band);
-    ctx.beginPath();
-    ctx.moveTo(-0.8, 0.18);
-    ctx.quadraticCurveTo(0, -0.14, 0.8, 0.18);
-    ctx.lineWidth = 0.025;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-    ctx.stroke();
-
-    // The clip that holds the card.
-    const clip = new Path2D();
-    clip.roundRect(-0.2, -0.13, 0.4, 0.28, 0.05);
-    ctx.fillStyle = BAND;
-    ctx.fill(clip);
-    ctx.lineWidth = 0.02;
-    ctx.strokeStyle = BAND_DARK;
-    ctx.stroke(clip);
-  });
-}
-
 // ---------- Face blur ----------
 
 /**
@@ -365,49 +293,35 @@ export const FILTERS = {
   dog: { label: 'Dog', draw: drawDog, amount: SIZE },
   cat: { label: 'Cat', draw: drawCat, amount: SIZE },
   glasses: { label: 'Sunglasses', draw: drawGlasses, amount: SIZE },
-  // `image` names the setting holding the user's picture for this filter.
-  headband: { label: 'Headband', draw: drawHeadband, amount: SIZE, image: 'headbandImage' },
   fisheye: { label: 'Fisheye', warp: fisheye, amount: { label: 'Strength', default: 58 } },
   bigEyes: { label: 'Big eyes', warp: bigEyes, amount: { label: 'Strength', default: 63 } },
   pinch: { label: 'Tiny face', warp: pinch, amount: { label: 'Strength', default: 50 } },
   faceBlur: { label: 'Face blur', kind: 'faceBlur', amount: { label: 'Blur', default: 50 } },
-  // Body filters cover whole people (found by segmentation, not face landmarks).
-  body: {
-    label: 'Body blur',
-    kind: 'body',
-    styles: {
-      color: { label: 'Color', amount: { label: 'Opacity', default: 100 } },
-      pixel: { label: 'Pixel blur', amount: { label: 'Pixel size', default: 40 } },
-      image: { label: 'Image', amount: { label: 'Opacity', default: 100 } },
-    },
-  },
-  mesh: { label: 'Landmarks', draw: drawMesh },
+  // Debug view of the raw landmarks; only offered in an unpacked install (see isDevBuild).
+  mesh: { label: 'Landmarks', draw: drawMesh, dev: true },
 };
 
-export const BODY_COLORS = ['#ee6f9a', '#2f7de1', '#ffffff', '#f5c400', '#1b1b1f', '#27b36a'];
-
-/** 'sticker' | 'warp' | 'faceBlur' | 'body' */
+/** 'sticker' | 'warp' | 'faceBlur' */
 export const kindOf = (filter) => filter?.kind ?? (filter?.warp ? 'warp' : 'sticker');
 
-/**
- * Slider key for the current filter: the filter id, or `body.<style>` since
- * each body style has its own slider.
- */
-export const amountKey = (id, bodyStyle) => (FILTERS[id]?.styles ? `${id}.${bodyStyle}` : id);
-
-/** Slider definition ({label, default}) for a key, or undefined. */
-export function amountDef(key) {
-  const [id, style] = key.split('.');
-  return style ? FILTERS[id]?.styles?.[style]?.amount : FILTERS[id]?.amount;
-}
-
-/** Slider amount for a key as 0..1 (the saved value, else its default). */
-export function amountOf(key, amounts) {
-  const def = amountDef(key);
+/** Slider amount for a filter as 0..1 (the saved value, else its default). */
+export function amountOf(id, amounts) {
+  const def = FILTERS[id]?.amount;
   if (!def) return 0.5;
-  const v = amounts?.[key];
+  const v = amounts?.[id];
   return (typeof v === 'number' ? v : def.default) / 100;
 }
+
+/**
+ * True when the extension is loaded unpacked (Developer mode), i.e. only on
+ * the developer's machine. Store installs always have an update_url.
+ */
+export function isDevBuild() {
+  return typeof chrome !== 'undefined' && !!chrome.runtime?.getManifest && !('update_url' in chrome.runtime.getManifest());
+}
+
+/** Filters to offer: everything, minus debug-only ones outside a dev build. */
+export const visibleFilters = () => Object.entries(FILTERS).filter(([, f]) => !f.dev || isDevBuild());
 
 /** Sticker scale for amount t: 0.5x at 0, 1x at 0.5, 2x at 1. */
 export const stickerScale = (t) => 2 ** ((t - 0.5) * 2);

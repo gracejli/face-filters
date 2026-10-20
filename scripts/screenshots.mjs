@@ -37,20 +37,12 @@ fs.cpSync(path.join(root, 'src', 'fonts'), path.join(docs, 'fonts'), { recursive
 // Shared site stylesheet (layout + self-hosted Space Mono from docs/fonts/).
 const SITE_CSS = '<link rel="stylesheet" href="style.css">';
 
-// Example images: stickers and warps, then face blur and each body style.
-// `settings` is what the extension is set to when the example is captured.
+// Example images: stickers and warps, then face blur. Debug-only filters are
+// left out. `settings` is what the extension is set to when it's captured.
 const FACE_EXAMPLES = Object.entries(FILTERS)
-  .filter(([id, f]) => id !== 'mesh' && ['sticker', 'warp'].includes(kindOf(f)))
-  // The headband's card stands well above the head, so that example leaves room above the photo.
-  .map(([id, f]) => ({ file: id, label: f.label, settings: { filter: id }, headroom: !!f.image }));
-const BLUR_EXAMPLES = [
-  { file: 'faceBlur', label: FILTERS.faceBlur.label, settings: { filter: 'faceBlur' } },
-  ...Object.entries(FILTERS.body.styles).map(([style, { label }]) => ({
-    file: `body-${style}`,
-    label: `Body: ${label.toLowerCase()}`,
-    settings: { filter: 'body', body: { style, color: '#ee6f9a' }, bodyImage: null },
-  })),
-];
+  .filter(([, f]) => !f.dev && ['sticker', 'warp'].includes(kindOf(f)))
+  .map(([id, f]) => ({ file: id, label: f.label, settings: { filter: id } }));
+const BLUR_EXAMPLES = [{ file: 'faceBlur', label: FILTERS.faceBlur.label, settings: { filter: 'faceBlur' } }];
 
 // ---------- docs/index.html ----------
 
@@ -75,7 +67,7 @@ ${SITE_CSS}
 <img class="logo" src="icon128.png" alt="">
 <h1>Face Hack</h1>
 
-<p class="cta"><a href="https://chromewebstore.google.com/detail/face-hack/cfdhakfgjfcnkfbfhicgbdingnbppdho">Get the extension</a><br><small>(free on the Chrome Web Store)</small></p>
+<p class="cta"><a class="button" href="https://chromewebstore.google.com/detail/face-hack/cfdhakfgjfcnkfbfhicgbdingnbppdho">Get the extension</a><br><small>Free on the Chrome Web Store</small></p>
 
 <div class="intro">Face Hack puts filters on the faces in photos and videos on any website. Everything happens on your computer.</div>
 
@@ -83,8 +75,8 @@ ${SITE_CSS}
 ${figuresFor(FACE_EXAMPLES)}
 </div>
 
-<h2>Blur and block out</h2>
-<div class="filters two">
+<h2>Blur</h2>
+<div class="filters one">
 ${figuresFor(BLUR_EXAMPLES)}
 </div>
 
@@ -92,11 +84,11 @@ ${figuresFor(BLUR_EXAMPLES)}
 <h2>About</h2>
 <p>How we present ourselves online has shifted to optimize, adjust, and perfect - leading to phenomenons like mewing, biohacking, and micro-beauty treatments to optimize our appearance for reach, trust, or growth. This chrome extension hacks every single face that it detects on the feed, satirizing, playing, remixing, or omitting identity altogether from the content that we consume. </p>
 <h2>How it Works</h2>
-<p>Turn it on and browse like normal. Face Hack finds the faces in photos and videos on the page and adds whichever filter you picked: dog ears, cat whiskers, sunglasses, a guessing-game headband with a picture of your choice, a fisheye bulge, big eyes or a tiny face. Click the icon in your toolbar to switch filters, and drag the slider to make the ears bigger or the fisheye stronger. Every face on the page changes as you drag.</p>
-<p>Face blur smudges out faces and necks. Body blur finds whole people, even ones facing away, and blocks them out with a solid color, a pixelated smear, or an image of your choice. Until you upload one, everybody becomes YOUR AD HERE.</p>
+<p>Turn it on and browse like normal. Face Hack finds the faces in photos and videos on the page and adds whichever filter you picked: dog ears, cat whiskers, sunglasses, a fisheye bulge, big eyes, a tiny face, or a face blur. Click the icon in your toolbar to switch filters, and drag the slider to make the ears bigger or the fisheye stronger. Every face on the page changes as you drag.</p>
+<p>Face blur smudges out faces and necks; drag the slider from a soft haze to an unrecognisable smear.</p>
 
 <h2>Private by design!</h2>
-<p>Face and person detection run on your computer, with models that ship inside the extension. Your photos are never uploaded, any image you add stays in your browser, there's no account, and nothing is tracked.</p>
+<p>Face detection runs on your computer, with a model that ships inside the extension. Your photos are never uploaded, there's no account, and nothing is tracked.</p>
 
 <h2>Share your screenshots</h2>
 <p>Caught something funny with Face Hack? Add it to the <a href="https://www.are.na/gli/screenshots-with-facehack">Screenshots with Face Hack</a> channel on Are.na.</p>
@@ -120,10 +112,6 @@ const TYPES = { '.html': 'text/html', '.css': 'text/css', '.png': 'image/png', '
 const EXAMPLE_PAGE = `<!doctype html><body style="margin:0;overflow:hidden">
 <img src="/obama.jpg" style="width:460px;display:block;margin:-6px 0 0 -110px">
 </body>`;
-// Smaller and lower, leaving white space above the photo for tall stickers.
-const HEADROOM_PAGE = `<!doctype html><body style="margin:0;overflow:hidden;background:#fff">
-<img src="/obama.jpg" style="width:360px;display:block;margin:72px 0 0 -60px">
-</body>`;
 const TILE_PAGE = `<!doctype html><base href="/docs/">${SITE_CSS}<body style="margin:0;width:440px;height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff">
 <img src="/docs/icon128.png" width="112" height="112">
 <h1 style="margin:12px 0 4px">Face Hack</h1>
@@ -133,8 +121,7 @@ const TILE_PAGE = `<!doctype html><base href="/docs/">${SITE_CSS}<body style="ma
 const server = http.createServer((req, res) => {
   const url = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (url === '/example.html' || url === '/tile.html') {
-    const headroom = new URL(req.url, 'http://x').searchParams.has('headroom');
-    res.writeHead(200, { 'content-type': 'text/html' }).end(url === '/tile.html' ? TILE_PAGE : headroom ? HEADROOM_PAGE : EXAMPLE_PAGE);
+    res.writeHead(200, { 'content-type': 'text/html' }).end(url === '/tile.html' ? TILE_PAGE : EXAMPLE_PAGE);
     return;
   }
   const file = url === '/obama.jpg' ? SOURCE : url.startsWith('/docs/') ? path.join(docs, path.normalize(url.slice(6))) : null;
@@ -167,11 +154,11 @@ try {
 
   // Examples: one fresh page per filter, captured at 2x for crisp images.
   let first = true;
-  for (const { file: id, settings, headroom } of [...FACE_EXAMPLES, ...BLUR_EXAMPLES]) {
+  for (const { file: id, settings } of [...FACE_EXAMPLES, ...BLUR_EXAMPLES]) {
     await setSettings({ enabled: true, ...settings });
     const page = await browser.newPage();
     await page.setViewport({ width: 240, height: 240, deviceScaleFactor: 2 });
-    await page.goto(`${origin}/example.html${headroom ? '?headroom' : ''}`, { waitUntil: 'load' });
+    await page.goto(`${origin}/example.html`, { waitUntil: 'load' });
     await sleep(first ? 8000 : 3000); // the first page also loads MediaPipe
     first = false;
     await page.screenshot({ path: path.join(examplesDir, `${id}.png`) });

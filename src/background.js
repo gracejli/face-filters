@@ -5,12 +5,16 @@
 //  2. Inject MediaPipe's WASM loader into the content script's isolated world
 //     on demand, so pages that never show a face don't pay for parsing it.
 
-import { DEFAULT_SETTINGS } from './settings.js';
+import { DEFAULT_SETTINGS, REMOVED_SETTINGS } from './settings.js';
+import { FILTERS } from './filters.js';
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 
 chrome.runtime.onInstalled.addListener(async () => {
+  // Drop settings (and any uploaded images) left over from removed filters.
+  await chrome.storage.local.remove(REMOVED_SETTINGS);
   const current = await chrome.storage.local.get(DEFAULT_SETTINGS);
+  if (!(current.filter in FILTERS)) current.filter = DEFAULT_SETTINGS.filter;
   await chrome.storage.local.set(current);
 });
 

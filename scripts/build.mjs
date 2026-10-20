@@ -11,8 +11,6 @@ const watch = process.argv.includes('--watch');
 const MODELS = {
   'face_landmarker.task':
     'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
-  // Person segmentation for the body filters (PASCAL VOC classes, "person" is one).
-  'deeplab_v3.tflite': 'https://storage.googleapis.com/mediapipe-models/image_segmenter/deeplab_v3/float32/1/deeplab_v3.tflite',
 };
 const modelDir = path.join(root, 'assets');
 const wasmDir = path.join(root, 'node_modules', '@mediapipe', 'tasks-vision', 'wasm');
@@ -42,8 +40,6 @@ async function copyStatic() {
     ['src/manifest.json', 'manifest.json'],
     ['src/popup.html', 'popup.html'],
     ['src/popup.css', 'popup.css'],
-    ['src/upload.html', 'upload.html'],
-    ['src/upload.css', 'upload.css'],
     [path.join(wasmDir, 'vision_wasm_internal.js'), 'wasm/vision_wasm_internal.js'],
     [path.join(wasmDir, 'vision_wasm_internal.wasm'), 'wasm/vision_wasm_internal.wasm'],
     ...Object.keys(MODELS).map((name) => [path.join(modelDir, name), `models/${name}`]),
@@ -61,7 +57,6 @@ const options = {
     background: 'src/background.js',
     content: 'src/content.js',
     popup: 'src/popup.js',
-    upload: 'src/upload.js',
   },
   outdir: dist,
   bundle: true,

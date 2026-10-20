@@ -38,7 +38,25 @@ h2 {
   margin: 48px 0 16px;
 }
 
-.cta { font-weight: 700; font-size: 18px; margin: 0 0 32px; }
+.cta { margin: 0 0 32px; }
+.cta small { display: inline-block; margin-top: 10px; font-size: 13px; }
+.button {
+  display: inline-block;
+  padding: 14px 30px;
+  border: 2px solid #000;
+  border-radius: 999px;
+  background: #000;
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  text-decoration: none;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 #f5c400;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.button:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #f5c400; }
+.button:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #f5c400; }
+.button:focus-visible { outline: 3px solid #f5c400; outline-offset: 3px; }
 
 .intro {
   border: 1px solid #000;
@@ -51,9 +69,10 @@ h2 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
-.filters.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.filters.one { grid-template-columns: minmax(0, 190px); justify-content: center; }
 @media (max-width: 480px) {
   .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .filters.one { grid-template-columns: minmax(0, 50%); }
 }
 figure {
   margin: 0;

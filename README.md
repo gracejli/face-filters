@@ -32,16 +32,20 @@ needs no network access of its own.
 After a rebuild, click the reload icon on the extension's card and reload the
 tabs you're testing in.
 
+**Debug mode.** An unpacked install also shows a **Landmarks** tile, which
+draws the raw face-mesh points. It's hidden in the Chrome Web Store version:
+`isDevBuild()` in `src/filters.js` checks for the `update_url` that every store
+install has.
+
 ## How it works
 
 | File | Role |
 | --- | --- |
 | `src/content.js` | Finds `<img>`/`<video>` (MutationObserver), processes only visible ones (IntersectionObserver), and draws on a canvas inserted right after each image, so popups, sticky headers and carousels that cover or clip the image do the same to the filter. Runs video detection with `requestVideoFrameCallback` at 15 fps. |
-| `src/detector.js` | MediaPipe Face Landmarker (images also scanned in overlapping quarters to catch small faces) and DeepLab v3 person segmentation, GPU with CPU fallback. Decodes images to an untainted `ImageBitmap`. |
+| `src/detector.js` | MediaPipe Face Landmarker (images also scanned in overlapping quarters to catch small faces) GPU with CPU fallback. Decodes images to an untainted `ImageBitmap`. |
 | `src/background.js` | Fetches cross-origin images for the content script and injects MediaPipe's WASM loader on demand. |
-| `src/filters.js` | Filter definitions: stickers (dog, cat, sunglasses, headband with an uploadable card picture, landmark debug view) drawn with Canvas 2D paths, warps (fisheye, big eyes, tiny face) defined as bulges, face blur (face + neck outline), and the body filter's styles. |
+| `src/filters.js` | Filter definitions: stickers (dog, cat, sunglasses, plus a Landmarks debug view shown only in unpacked installs) drawn with Canvas 2D paths, warps (fisheye, big eyes, tiny face) defined as bulges, and face blur (face + neck outline). |
 | `src/warp.js` | One shared WebGL2 context that renders an image or video frame with bulge distortions; the result is pasted onto the overlay canvas. |
-| `src/upload.*`, `src/ad.js`, `src/card.js` | Upload page (`upload.html?for=body` or `?for=headband`) for the body filter's image and the headband's card picture, stored in `chrome.storage.local`, plus their defaults: the YOUR AD HERE pattern and the question-mark card. |
 | `src/popup.*` | On/off toggle, a grid of filter tiles (Tabler icons, inlined at build time) and an amount slider for filters that define one (size for stickers, strength for warps). Settings live in `chrome.storage.local`. |
 
 Notes:
@@ -83,7 +87,7 @@ Notes:
   nearest positioned ancestor; it clips the image but not the overlay. Warps
   follow the image's own `border-radius` (round avatars work), but not
   `clip-path` or masks.
-- Sticker filters (ears, the headband card) may extend past the photo's
+- Sticker filters (the dog and cat ears) may extend past the photo's
   edges, mostly above it, so they aren't cut off when a head is near the top.
   Their canvas is padded for this; warps and blurs stay inside the photo.
 - Detection runs on the page's main thread. Each run is a few milliseconds on

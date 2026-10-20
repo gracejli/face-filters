@@ -1,5 +1,4 @@
-// MediaPipe tasks, running inside the content script: the Face Landmarker
-// (face filters) and an Image Segmenter that finds people (body filters).
+// MediaPipe's Face Landmarker, running inside the content script.
 //
 // MediaPipe normally loads its WASM glue (vision_wasm_internal.js) by adding a
 // <script> tag to the page. In a content script that would run in the page's
@@ -8,7 +7,7 @@
 // isolated world with chrome.scripting, which defines `self.ModuleFactory`,
 // and we hand MediaPipe an empty wasmLoaderPath so it skips its own loader.
 
-import { FaceLandmarker, ImageSegmenter } from '@mediapipe/tasks-vision';
+import { FaceLandmarker } from '@mediapipe/tasks-vision';
 
 const MAX_FACES = 4;
 // Detection cost grows with input size and faces are fine at this resolution.
@@ -16,7 +15,6 @@ const MAX_DETECT_DIM = 1024;
 
 let factoryPromise = null;
 let landmarkerPromise = null;
-let segmenterPromise = null;
 
 /** The WASM module factory. MediaPipe clears self.ModuleFactory after each use, so keep our own reference. */
 function loadFactory() {
@@ -71,48 +69,6 @@ export function getLandmarker() {
       runningMode: 'IMAGE',
       numFaces: MAX_FACES,
     }));
-}
-
-function getSegmenter() {
-  return once(() => segmenterPromise, (p) => (segmenterPromise = p), async () => {
-    const segmenter = await createTask(ImageSegmenter, {
-      baseOptions: { modelAssetPath: chrome.runtime.getURL('models/deeplab_v3.tflite') },
-      runningMode: 'IMAGE',
-      outputCategoryMask: false,
-      outputConfidenceMasks: true,
-    });
-    const person = segmenter.getLabels().indexOf('person');
-    return { segmenter, person: person >= 0 ? person : 15 };
-  });
-}
-
-/**
- * Find people in any ImageSource. Returns a soft mask at the source's
- * resolution: {width, height, alpha} where alpha is 0..255 per pixel, or null
- * when nobody is there. Pass a small source (≤512px): DeepLab works at 257px
- * anyway and the mask is upscaled smoothly when drawn.
- */
-export async function segmentPeople(source) {
-  const { segmenter, person } = await getSegmenter();
-  const result = segmenter.segment(source);
-  try {
-    const mask = result.confidenceMasks?.[person];
-    if (!mask) return null;
-    const conf = mask.getAsFloat32Array();
-    const alpha = new Uint8ClampedArray(conf.length);
-    let covered = 0;
-    for (let i = 0; i < conf.length; i++) {
-      // Soft threshold: fully in above 0.6, fully out below 0.3.
-      const a = Math.min(1, Math.max(0, (conf[i] - 0.3) / 0.3));
-      alpha[i] = a * 255;
-      if (a > 0.5) covered++;
-    }
-    // Ignore specks: less than 0.3% of the image is noise, not a person.
-    if (covered < conf.length * 0.003) return null;
-    return { width: mask.width, height: mask.height, alpha };
-  } finally {
-    result.close();
-  }
 }
 
 /**
