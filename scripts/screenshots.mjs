@@ -75,24 +75,27 @@ ${SITE_CSS}
 
 <p class="cta"><a class="button" href="https://chromewebstore.google.com/detail/face-hack/cfdhakfgjfcnkfbfhicgbdingnbppdho">Get the extension</a><br><small>Free on the Chrome Web Store</small></p>
 
-<div class="intro">Face Hack puts filters on the faces in photos and videos on any website. Everything happens on your computer.</div>
+<div class="intro">Face Hack puts filters on the faces it detects in the browser</div>
 
 <div class="filters">
 ${figuresFor(EXAMPLES)}
 </div>
 
 <div class="copy">
-<h2>About</h2>
-<p>How we present ourselves online has shifted towards optimizations. This has led to phenomenons like mewing, biohacking, and procedures to optimize our appearance for reach, trust, or growth. Face Hack hacks every single face that it detects on the feed, satirizing, playing, remixing, or omitting identity altogether from the content that we consume. </p>
+<h2>about</h2>
+  <p>hack every face you see on your browser. no more perfect faces! </p>
 
-<h2>Private, Local</h2>
-<p>Face detection runs on your computer, with a model that ships inside the extension. Your photos are never uploaded and nothing is tracked.</p>
+<p>How we present ourselves online has shifted towards extreme optimization and hyperbole. This has led to phenomenons like mewing, biohacking, and facial procedures to optimize our appearance for reach, trust, and growth. 
+  <p>In hacking, we satirize, play, and remix  - or omit identity - all together from the content we consume. </p> 
+<h2>I don't take any data</h2>
+  <p>face detection runs on computer, with a facial detection model that ships inside this extension. photos are never uploaded and nothing is tracked!
 
 </div>
 
 <p class="arena"><a class="button" href="https://www.are.na/gli/screenshots-with-facehack">Public Are.na Face Hack screenshot channel</a></p>
 
 <footer>
+<p class="credit">face hack is a project by <a href="https://gracejli.com">grace li</a></p>
 <a href="https://chromewebstore.google.com/detail/face-hack/cfdhakfgjfcnkfbfhicgbdingnbppdho">Chrome Web Store</a> · <a href="https://www.are.na/gli/screenshots-with-facehack">Are.na</a> · <a href="privacy.html">Privacy policy</a> · <a href="https://github.com/gracejli/face-filters">Source on GitHub</a>
 </footer>
 </main>
